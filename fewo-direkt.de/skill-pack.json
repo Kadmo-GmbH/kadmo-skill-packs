@@ -1,0 +1,8 @@
+{
+  "name": "fewo-direkt",
+  "version": "0.1.0",
+  "title": "Fewo-direkt Vacation Rentals",
+  "description": "Search vacation rental listings on Fewo-direkt.de, the German Vrbo/Expedia portal",
+  "domain": "fewo-direkt.de",
+  "requires": { "browser": true, "llm": false }
+}

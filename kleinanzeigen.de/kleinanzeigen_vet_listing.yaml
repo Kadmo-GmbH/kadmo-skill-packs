@@ -1,0 +1,257 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-08-17"
+id: kleinanzeigen_vet_listing
+title: "Kleinanzeigen: Vet a Listing"
+description: "Open one Kleinanzeigen listing and return a structured vetting record — availability status, price, condition, view-count velocity, seller trust signals, escrow availability, extracted product identifiers, and machine-readable risk flags. Category-agnostic; caller supplies any category-specific disqualifiers. Deterministic, no LLM call."
+overview: |
+  The go/no-go check that must run before acting on any listing found via
+  `kleinanzeigen_search`.
+
+  Status is resolved first — everything else is moot when the ad is gone. Detection reads
+  only *rendered* status labels: `#viewad-title` always contains hidden `Reserviert •` and
+  `Gelöscht •` spans, so a naive `textContent` read marks every listing, including live ones,
+  as deleted.
+
+  It then captures what a buyer actually needs to judge risk: the structured `Zustand`
+  condition field (the cheapest ad in a band is regularly the broken one), the view counter
+  and post date that reveal how contested the listing is, whether "Direkt kaufen" escrow is
+  on offer, and whether the seller is a long-tenured private account or one created days ago.
+
+  `flags` is the machine-readable verdict surface. An automated pipeline should treat any
+  flag as a stop-and-look-closer, not a silent filter.
+
+  | Flag | Meaning |
+  |---|---|
+  | `NOT_AVAILABLE` | Ad is reserved or deleted |
+  | `CONDITION_DEFEKT` | `Zustand: Defekt` — seller declares it broken |
+  | `NO_ESCROW` | No "Direkt kaufen"; payment would be unprotected |
+  | `FRESH_ACCOUNT` | Seller account younger than 30 days |
+  | `HIGH_CONTENTION` | 50+ views per day since posting |
+  | `REJECT_PATTERN_MATCH` | Caller's `reject_pattern` matched — only when that param is set |
+  | `NO_IDENTIFIER` | No product identifier found — only when `require_identifier` is true |
+
+  The last two flags are opt-in so the workflow stays category-agnostic: it vets a car, a
+  sofa, or a flat as readily as electronics. Category-specific disqualifiers belong in
+  `reject_pattern`, supplied by the caller — e.g. a memory hunt passes `SO-?DIMM|Notebook` to
+  screen out laptop modules listed under desktop searches, which would be meaningless noise
+  for any other category.
+
+category:
+  level: task
+  domain: research
+  reusable: true
+
+params:
+  listing_url:
+    type: string
+    description: "Full listing URL, e.g. https://www.kleinanzeigen.de/s-anzeige/<slug>/<id>-<cat>-<loc>"
+    required: true
+  reject_pattern:
+    type: string
+    description: "Optional case-insensitive regex matched against title + description. A hit raises REJECT_PATTERN_MATCH. Use it for category-specific disqualifiers the caller knows about."
+    required: false
+  require_identifier:
+    type: boolean
+    description: "When true, raise NO_IDENTIFIER if no product identifier (model/serial-style token) is found. Leave false for categories that have no such identifier."
+    required: false
+
+policies:
+  allowed_domains:
+    - "kleinanzeigen.de"
+    - "*.kleinanzeigen.de"
+
+steps:
+  - type: browser.navigate
+    url: "{{listing_url}}"
+
+  # Wait on body, not #viewad-title: a removed ad redirects to a category listing
+  # page where that element never appears, and waiting for it would fail the run
+  # instead of reporting the ad as gone. Pages are server-rendered, so body is enough.
+  - type: browser.wait
+    selector: body
+    timeout: 15000
+
+  - type: browser.wait
+    ms: 500
+
+  - type: browser.injectJS
+    id: sb-kleinanzeigen-vet-parse
+    as: vet_json
+    js: |
+      (() => {
+        const txt = (sel) => {
+          const e = document.querySelector(sel);
+          return e ? (e.textContent || '').replace(/\s+/g, ' ').trim() : null;
+        };
+
+        // innerText renders <br> as a line break; textContent drops it entirely and
+        // welds neighbouring words together ("...Z40Die"), which destroys part
+        // numbers at the end of a line. Use this for any free-text field.
+        const rendered = (sel) => {
+          const e = document.querySelector(sel);
+          return e ? (e.innerText || e.textContent || '').replace(/\s+/g, ' ').trim() : null;
+        };
+
+        // --- ad still exists? ---
+        // A removed listing 302s to a category results page, so #viewad-title is
+        // simply absent. Report that as not_found instead of parsing garbage.
+        const titleEl = document.querySelector('#viewad-title');
+        if (!titleEl) {
+          return JSON.stringify({
+            url: "{{listing_url}}",
+            status: 'not_found',
+            note: 'No listing on the resolved page — a removed ad redirects to a category listing.',
+            landed_on: location.href,
+            flags: ['NOT_AVAILABLE'],
+            verdict: 'DEAD'
+          });
+        }
+
+        // --- availability ---
+        // The "Reserviert •" / "Gelöscht •" labels are two spans that are ALWAYS
+        // present inside #viewad-title. The site toggles them with an `is-hidden`
+        // class (display:none) rather than adding/removing them, so textContent
+        // reports every listing as deleted. Count only spans that actually render.
+        const statusSpans = Array.from(
+          document.querySelectorAll('#viewad-title .pvap-reserved-title')
+        ).filter(e => !e.classList.contains('is-hidden') && getComputedStyle(e).display !== 'none');
+
+        let reserved = statusSpans.some(e => /Reserviert/i.test(e.textContent || ''));
+        let deleted = statusSpans.some(e => /Gelöscht/i.test(e.textContent || ''));
+
+        // innerText honours CSS visibility, so hidden labels never reach it.
+        const title = titleEl ? (titleEl.innerText || '').replace(/\s+/g, ' ').trim() : '';
+
+        // Fallback if the label markup is ever renamed: read the visible text.
+        if (!statusSpans.length && !document.querySelector('#viewad-title .pvap-reserved-title')) {
+          reserved = /^\s*Reserviert\s*•/i.test(title);
+          deleted = /^\s*Gelöscht\s*•/i.test(title);
+        }
+
+        const status = deleted ? 'deleted' : (reserved ? 'reserved' : 'live');
+
+        // --- structured detail rows: li.addetailslist--detail survived the CSS
+        // migration, but the label class did not — the label is a bare text node. ---
+        const details = {};
+        document.querySelectorAll('#viewad-details li.addetailslist--detail').forEach(li => {
+          const vEl = li.querySelector('.addetailslist--detail--value');
+          const value = vEl ? vEl.textContent.replace(/\s+/g, ' ').trim() : '';
+          const label = (li.textContent || '').replace(/\s+/g, ' ').trim().replace(value, '').trim();
+          if (label) details[label] = value;
+        });
+
+        const priceTxt = txt('#viewad-price') || '';
+        const num = priceTxt.match(/(\d{1,3}(?:\.\d{3})*|\d+)\s*€/);
+        const desc = rendered('#viewad-description-text') || '';
+        const seller = txt('#viewad-contact') || '';
+        const bodyText = document.body.textContent || '';
+
+        // "<DD.MM.YYYY> <views>" — post date then the view counter.
+        const extra = txt('#viewad-extra-info') || '';
+        const posted = (extra.match(/(\d{2}\.\d{2}\.\d{4})/) || [])[1] || null;
+        const views = parseInt((extra.match(/(\d+)\s*$/) || [])[1], 10);
+
+        const parseDE = (s) => {
+          if (!s) return null;
+          const p = s.split('.').map(Number);
+          return new Date(p[2], p[1] - 1, p[0]).getTime();
+        };
+        const daysSince = (s) => {
+          const t = parseDE(s);
+          return t === null ? null : Math.max(0, Math.round((Date.now() - t) / 864e5));
+        };
+
+        const listedDays = daysSince(posted);
+        const viewsPerDay = (!isNaN(views) && listedDays !== null)
+          ? Math.round(views / Math.max(1, listedDays))
+          : null;
+
+        const activeSince = (seller.match(/Aktiv seit\s+(\d{2}\.\d{2}\.\d{4})/) || [])[1] || null;
+        const accountAgeDays = daysSince(activeSince);
+        const sellerType = /Gewerblicher/.test(seller)
+          ? 'commercial'
+          : (/Privater/.test(seller) ? 'private' : null);
+
+        // Model/serial-style tokens. Where a category has them they are the
+        // highest-signal identity field, and they almost always live in the
+        // description rather than the title. Reported for every category;
+        // only *required* when the caller says the category has them.
+        //
+        // The raw match also catches spec strings (DDR5-6000, CL36-46-46-84,
+        // PC5-54400U), which are not identities. Filter those out: a real part
+        // number is long, mixes letters and digits, and does not open with a
+        // known spec prefix.
+        const SPEC_SHAPED = /^(DDR\d|CL\d|PC\d|XMP|EXPO|JEDEC)|^\d+(-\d+)+$|^\d+(MT|MHZ|GB|V)$/i;
+        const isIdentifier = (s) => {
+          if (s.length < 8 || SPEC_SHAPED.test(s)) return false;
+          const digits = (s.match(/\d/g) || []).length;
+          const letters = (s.match(/[A-Z]/gi) || []).length;
+          if (digits < 2 || letters < 2) return false;
+          return /\d[A-Z]/i.test(s);   // letters and digits interleave
+        };
+        // {1,4} leading letters, not {2,4}: G.Skill SKUs start with a single
+        // letter (F5-6400J3239F48GX2-RS5K) and were being missed entirely.
+        // The isIdentifier filter below removes the extra noise this admits.
+        const identifiers = Array.from(new Set(
+          (desc.match(/\b(?:[A-Z]{1,4}\d[A-Z0-9\-]{5,})\b/g) || [])
+        )).filter(isIdentifier).slice(0, 8);
+
+        const condition = details['Zustand'] || null;
+        const escrow = /Direkt kaufen/.test(bodyText);
+
+        // Category-specific disqualifiers come from the caller, not from this
+        // workflow — hardcoding one category's traps here would emit noise for
+        // every other category.
+        // String.raw so regex escapes survive interpolation — see the same note
+        // in kleinanzeigen_search; a plain literal turns `\b` into a backspace
+        // and the pattern silently stops matching.
+        // An omitted optional param can arrive as the literal "{{name}}" rather
+        // than an empty string. Left unchecked that becomes a live regex.
+        const REJECT_RAW = String.raw`{{reject_pattern}}`;
+        const REJECT_PATTERN = (!REJECT_RAW || /^\{\{.*\}\}$/.test(REJECT_RAW)) ? '' : REJECT_RAW;
+        const REQUIRE_IDENTIFIER = "{{require_identifier}}" === "true";
+        let rejectRx = null;
+        if (REJECT_PATTERN) { try { rejectRx = new RegExp(REJECT_PATTERN, 'i'); } catch (e) { rejectRx = null; } }
+        const rejectMatch = rejectRx ? rejectRx.test(title + ' ' + desc) : false;
+
+        const flags = [];
+        if (status !== 'live') flags.push('NOT_AVAILABLE');
+        if (/Defekt/i.test(condition || '')) flags.push('CONDITION_DEFEKT');
+        if (!escrow) flags.push('NO_ESCROW');
+        if (accountAgeDays !== null && accountAgeDays < 30) flags.push('FRESH_ACCOUNT');
+        if (viewsPerDay !== null && viewsPerDay >= 50) flags.push('HIGH_CONTENTION');
+        if (rejectMatch) flags.push('REJECT_PATTERN_MATCH');
+        if (REQUIRE_IDENTIFIER && identifiers.length === 0) flags.push('NO_IDENTIFIER');
+
+        return JSON.stringify({
+          url: "{{listing_url}}",
+          status: status,
+          title: title,
+          price_eur: num ? parseInt(num[1].replace(/\./g, ''), 10) : null,
+          negotiable: /\bVB\b/.test(priceTxt),
+          condition: condition,
+          details: details,
+          posted: posted,
+          listed_days: listedDays,
+          views: isNaN(views) ? null : views,
+          views_per_day: viewsPerDay,
+          escrow: escrow,
+          shipping: /Versand möglich/.test(bodyText),
+          warranty_excluded: /Gewährleistung|Sachmängelhaftung/i.test(desc),
+          seller: {
+            type: sellerType,
+            active_since: activeSince,
+            account_age_days: accountAgeDays,
+            summary: seller.slice(0, 200)
+          },
+          location: txt('#viewad-locality'),
+          identifiers: identifiers,
+          description: desc.slice(0, 1200),
+          flags: flags,
+          verdict: flags.length === 0 ? 'CLEAR' : (status !== 'live' ? 'DEAD' : 'REVIEW')
+        });
+      })();
+
+  - type: control.stop
+    message: "{{vet_json}}"

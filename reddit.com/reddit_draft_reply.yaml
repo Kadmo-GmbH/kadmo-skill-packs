@@ -1,0 +1,91 @@
+schema_version: 1
+version: "1.3.0"
+last_verified: "2026-02-03"
+id: reddit_draft_reply
+title: "Draft Reply"
+description: "Thread-page embed button — reads the open thread, drafts one MxTide-voice comment, types it into the textarea for manual review and submission."
+overview: |
+  Triggered from a floating SideButton overlay on an open Reddit thread, this chain reads the full post and top-level comments, classifies the thread against the operator's persona rules, and drafts a single reply in the configured voice. The draft is typed directly into Reddit's comment textarea so the operator can edit and submit with one click.
+
+  The workflow never submits automatically — it stops at the "ready to send" state. It is the per-thread action that complements the batch evaluate-and-draft chain when the operator is manually browsing rather than running a scheduled sweep.
+
+category:
+  level: automation
+  domain: social
+  reusable: false
+params:
+  post_url: string
+  instructions: string
+policies:
+  allowed_domains:
+    - old.reddit.com
+embed:
+  when: ".commentarea .usertext-edit"
+  label: "Draft Reply"
+  prompt:
+    param: instructions
+    placeholder: "e.g. be snarky, ask about their setup"
+    title: "Draft Reply"
+  param_map:
+    post_url: "{{_url}}"
+    instructions: "{{instructions}}"
+  result:
+    action: "none"
+steps:
+  # Extract thread data in-place (no navigation — we're already on the page)
+  - type: browser.extract
+    selector: ".title a.title"
+    as: title
+
+  - type: browser.extract
+    selector: ".score.unvoted"
+    attribute: "title"
+    as: score
+
+  - type: browser.extract
+    selector: ".expando .usertext-body"
+    as: body
+
+  - type: browser.extract
+    selector: ".comments"
+    as: comments
+
+  - type: browser.extractMap
+    selector: ".commentarea > .sitetable > .thing.comment > .entry"
+    fields:
+      author:
+        selector: ".author"
+      score:
+        selector: ".score.unvoted"
+        attribute: "title"
+      body:
+        selector: ".usertext-body"
+    as: thread_comments
+
+  # Draft a reply using shared persona workflow
+  - type: workflow.call
+    workflow: reddit_persona_draft
+    params:
+      title: "{{title}}"
+      score: "{{score}}"
+      body: "{{body}}"
+      comments: "{{comments}}"
+      thread_comments: "{{thread_comments}}"
+      instructions: "{{instructions}}"
+      output_format: "Output ONLY the raw comment text. No labels, no quotes, no formatting. Just the comment as it would appear in the textarea."
+    as: persona
+
+  # Scroll to comment area and type draft
+  - type: browser.scroll
+    direction: down
+    amount: 600
+
+  - type: browser.click
+    selector: ".commentarea .usertext-edit textarea"
+
+  - type: browser.type
+    selector: ".commentarea .usertext-edit textarea"
+    text: "{{persona.draft}}\n\n---\nSent from sidebutton.com"
+
+  - type: control.stop
+    message: "Draft typed into comment box\n\n{{persona.draft}}\n\nPost: {{post_url}}"

@@ -1,0 +1,41 @@
+id: jira_prepare_issue_fields
+title: "Prepare Issue Fields"
+description: "Converts unstructured element content into structured Jira issue fields using LLM"
+overview: |
+  A pre-processing primitive that takes a raw block of text — usually the contents of a highlighted DOM element, a clipboard paste, or a stack trace — and maps it to Jira's expected field shape: summary, description, priority, labels, and component. An LLM step does the extraction; the output is a structured object ready for a create call.
+
+  This workflow does not create the ticket itself. Compose it in front of a create step when the source content is messy or mixed-format and needs normalising before submission.
+
+category:
+  level: primitive
+  domain: support
+
+params:
+  element_text: string
+  page_url: string
+  page_title: string
+
+steps:
+  - type: llm.generate
+    prompt: |
+      Convert this webpage element into a Jira issue summary and description.
+
+      Element content:
+      {{element_text}}
+
+      Page: {{page_title}} ({{page_url}})
+
+      Output ONLY valid JSON (no markdown, no explanation):
+      {
+        "summary": "Brief title, max 100 chars",
+        "description": "Detailed description with context"
+      }
+
+      Rules:
+      - Summary: concise, specific, actionable (e.g. "Review Fireflies HubSpot integration guide")
+      - Description: include source page URL and relevant details from the element
+    as: issue_fields_json
+
+  - type: variable.set
+    name: issue_fields
+    value: "{{issue_fields_json}}"

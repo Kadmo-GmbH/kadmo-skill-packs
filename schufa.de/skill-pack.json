@@ -1,0 +1,13 @@
+{
+  "name": "schufa",
+  "version": "0.1.0",
+  "title": "Schufa Credit Bureau",
+  "description": "Knowledge pack for app.schufa.de — Germany's consumer credit bureau self-service portal. Documents the 2026 12-factor score methodology with full tier tables, contract entries, inquiry types, identity protection, and data correction flows.",
+  "domain": "schufa.de",
+  "requires": {
+    "browser": true,
+    "llm": false
+  },
+  "roles": [],
+  "private": false
+}

@@ -1,0 +1,117 @@
+schema_version: 1
+version: "2.0.0"
+id: writing_quality_check
+title: "Writing: Quality Check"
+description: "Score content on 5 dimensions and detect AI writing patterns using reference libraries. Returns pass/fail verdict at 35/50 threshold. Single LLM call with full reference material."
+overview: |
+  Scores a piece of written content against a structured rubric with five dimensions — clarity, voice, rhythm, honesty, and edit quality — using the writing-standards reference library. A single LLM call evaluates all dimensions at once and flags any passages that match known AI writing patterns, so issues are surfaced against concrete excerpts rather than vague critiques.
+
+  The workflow returns a numeric score per dimension, a total, and a pass-or-fail verdict at a thirty-five-out-of-fifty threshold. Use it as a gate before publishing, as a revision aid during drafting, or as a batch audit when reviewing long-form content.
+
+category:
+  level: process
+  domain: writing
+  reusable: true
+params:
+  content: string
+  context: string
+
+steps:
+  # Step 1: Load reference libraries from installed skill pack
+  - type: shell.run
+    cmd: "cat ~/.sidebutton/skills/writing/writing-quality/references/banned-patterns.md"
+    as: ref_patterns
+
+  - type: shell.run
+    cmd: "cat ~/.sidebutton/skills/writing/writing-quality/references/banned-phrases.md"
+    as: ref_phrases
+
+  - type: shell.run
+    cmd: "cat ~/.sidebutton/skills/writing/writing-quality/references/banned-structures.md"
+    as: ref_structures
+
+  - type: shell.run
+    cmd: "cat ~/.sidebutton/skills/writing/writing-quality/references/scoring.md"
+    as: ref_scoring
+
+  # Step 2: Single LLM call — pattern detection + scoring + verdict
+  - type: llm.generate
+    prompt: |
+      You are a writing quality auditor. Perform a two-pass audit on the content below.
+
+      CONTENT:
+      {{content}}
+
+      BRAND CONTEXT:
+      {{context}}
+
+      ---
+      REFERENCE: BANNED PATTERNS
+      {{ref_patterns}}
+
+      ---
+      REFERENCE: BANNED PHRASES
+      {{ref_phrases}}
+
+      ---
+      REFERENCE: BANNED STRUCTURES
+      {{ref_structures}}
+
+      ---
+      REFERENCE: SCORING RUBRIC
+      {{ref_scoring}}
+
+      ---
+
+      INSTRUCTIONS:
+
+      PASS 0 — CONTENT TYPE DETECTION
+      Classify the content as one of: landing-page, prose, social, email, other.
+      A "landing-page" has: section headings, feature descriptions, CTAs, pricing, testimonials, or proof points arranged in visual blocks.
+
+      PASS 1 — PATTERN DETECTION
+      Scan the content against ALL patterns, phrases, and structures from the references. For each match found, output one line:
+      PATTERN_NAME | location (quote 5-10 words) | severity (HIGH/MEDIUM/LOW) | suggestion
+
+      If no patterns found, output: CLEAN
+
+      Content-type exceptions (landing-page ONLY — apply these 3 adjustments, keep everything else at full severity):
+      1. SKIP Pattern 29 (Fragmented Headers) and S3 (Dramatic Fragmentation) — section labels like "Deploy." + description are standard landing page structure
+      2. REDUCE Pattern 10 (Rule of Three) to LOW — unless the three items are vague adjectives like "fast, reliable, scalable"
+      3. REDUCE Metronomic Sentences to LOW — uniform headline+description pairs are a layout pattern
+
+      ALL OTHER PATTERNS remain at full severity for landing pages. Promotional language, vague claims, AI vocabulary, false agency, significance inflation, passive voice, etc. are still problems on landing pages. Be strict on these.
+
+      PASS 2 — SCORING
+      Rate content 1-10 on each dimension. Be strict — most marketing copy scores 4-6.
+
+      For landing pages, adjust only these 3 dimensions:
+      - Rhythm: Score 5 (not lower) if uniform short sentences match a headline+body section structure. But do NOT score higher than 6 unless there is genuine length variation.
+      - Authenticity: Score based on whether the brand voice is distinct and consistent (not generic corporate). Do NOT require personal/first-person voice. But do NOT score higher than 6 unless the copy has genuine personality or takes stances.
+      - Trust: Judge based on whether claims are SPECIFIC AND VERIFIABLE (named customers, concrete numbers, named sources like G2/Forbes), NOT whether source URLs appear inline. Landing pages link to case studies elsewhere. Score 5+ if most metrics use real numbers attributed to named entities. Only penalize: vague unverifiable claims ("industry-leading", "thousands of customers"), absolute superlatives without qualifier ("perfect, every time"), and metrics with zero indication of origin or scope.
+      All other dimensions (Directness, Density): score exactly as for prose.
+
+      OUTPUT FORMAT (follow exactly):
+
+      CONTENT_TYPE: [landing-page|prose|social|email|other]
+
+      PATTERNS:
+      [pattern lines or CLEAN]
+
+      SCORES:
+      directness|N
+      rhythm|N
+      trust|N
+      authenticity|N
+      density|N
+      total|NN
+
+      VERDICT: [For landing-page: PASS if total >= 28, REVISE if total < 28. For prose: PASS if total >= 35, REVISE if total < 35.]
+
+      GUIDANCE:
+      [If REVISE: 2-3 sentences naming the 1-2 most impactful fixes. If PASS but under 35: note areas for improvement. If PASS 35+: "No revision needed."]
+    as: audit_result
+
+  # Step 3: Output
+  - type: control.stop
+    message: "{{audit_result}}"

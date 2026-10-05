@@ -1,0 +1,50 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-02-02"
+id: reddit_check_karma
+title: "Check Karma"
+description: "Audit a Reddit account — pulls total post/comment karma plus the per-subreddit breakdown table from the user's profile page."
+overview: |
+  A read-only audit of a Reddit account. The workflow opens the account's profile page on old.reddit.com, extracts total post and comment karma, and then captures the per-subreddit breakdown table that Reddit exposes in the profile sidebar. No votes are cast and no comments are posted.
+
+  Use this to track an account's standing over time, to confirm an account is healthy enough to participate in a given subreddit, or as a pre-flight check before running any posting workflow. The structured output is suitable for dashboards or pipelines that compare snapshots over time.
+
+category:
+  level: task
+  domain: social
+  reusable: true
+params:
+  username: string
+policies:
+  allowed_domains:
+    - old.reddit.com
+steps:
+  - type: browser.navigate
+    url: "https://old.reddit.com/user/{{username}}"
+
+  - type: browser.wait
+    selector: ".titlebox span.karma"
+    timeout: 10000
+
+  - type: browser.extract
+    selector: ".titlebox span.karma"
+    as: post_karma
+
+  - type: browser.extract
+    selector: ".titlebox span.comment-karma"
+    as: comment_karma
+
+  # Click to reveal per-subreddit breakdown
+  - type: browser.click
+    selector: ".karma-breakdown a"
+
+  - type: browser.wait
+    selector: ".side .titlebox table"
+    timeout: 5000
+
+  - type: browser.extract
+    selector: ".side .titlebox table"
+    as: breakdown
+
+  - type: control.stop
+    message: "u/{{username}} — post karma: {{post_karma}}, comment karma: {{comment_karma}}\n\nSubreddit breakdown:\n{{breakdown}}"

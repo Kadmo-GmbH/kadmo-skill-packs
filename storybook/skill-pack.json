@@ -1,0 +1,13 @@
+{
+  "name": "storybook",
+  "version": "1.0.0",
+  "title": "Storybook Testing Workflow",
+  "description": "Storybook as a review artefact and a test gate — current-major setup (v9/v10 package moves), CSF 3 stories, play-function interaction tests, the Vitest addon gate, the a11y ratchet, and what snapshot and visual checks do and do not cover.",
+  "domain": "storybook",
+  "requires": {
+    "browser": false,
+    "llm": false
+  },
+  "roles": [],
+  "private": false
+}

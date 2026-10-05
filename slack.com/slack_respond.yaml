@@ -1,0 +1,39 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-02-08"
+id: slack_respond
+title: "Respond to Message"
+description: "Generates a contextual response to a Slack message. Pure utility — the response tone and content are shaped by the injected role context."
+overview: |
+  A response-generation primitive for Slack. Given a source message and any supplied thread context, the workflow drafts an appropriate reply whose tone and content are shaped by whatever role context is injected at call time — an SE agent produces a technically precise answer, a support agent produces a customer-friendly one, and so on.
+
+  The workflow does not post the reply; it only produces the draft. Pair it with the browser-post-message primitive when actual sending is intended, or return the draft to the operator for manual review.
+
+category:
+  level: primitive
+  domain: ops
+  reusable: true
+params:
+  message:
+    type: string
+    description: "The message to respond to"
+  reporter:
+    type: string
+    description: "Who sent the message"
+    default: "User"
+  channel:
+    type: string
+    description: "Source channel"
+    default: "general"
+steps:
+  - type: llm.generate
+    prompt: |
+      Write a brief, helpful response (2-3 sentences) to this message from {{reporter}} in #{{channel}}:
+
+      "{{message}}"
+
+      Respond naturally based on who you are and what you can help with.
+    as: response
+
+  - type: control.stop
+    message: "DRAFT_RESPONSE: {{response}}"

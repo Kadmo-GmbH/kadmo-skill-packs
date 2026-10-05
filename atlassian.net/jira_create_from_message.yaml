@@ -1,0 +1,65 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-02-08"
+id: jira_create_from_message
+title: "Create Ticket from Message"
+description: "Takes a message and creates a Jira ticket with LLM-generated summary and description. Pure utility — no role logic, no branching."
+overview: |
+  A compact utility chain that converts an unstructured message — a Slack post, an email body, a chat transcript — into a properly-formatted Jira ticket. An LLM step produces a concise summary and a structured description from the message, and the ticket is then created in the target project.
+
+  Because it is a pure primitive with no role logic or branching, it is intended to be composed into larger triage or intake flows rather than dispatched directly. Callers supply the source message and project key; the workflow returns the new ticket's key.
+
+category:
+  level: primitive
+  domain: ops
+  reusable: true
+params:
+  message:
+    type: string
+    description: "The source message to create a ticket from"
+  reporter:
+    type: string
+    description: "Who reported the issue"
+    default: "User"
+  channel:
+    type: string
+    description: "Source channel"
+    default: "general"
+  jira_project:
+    type: string
+    description: "Jira project key (e.g. SB, ENG)"
+steps:
+  - type: llm.generate
+    prompt: |
+      Write a concise Jira ticket summary (max 80 characters) for this message:
+
+      "{{message}}"
+
+      Return ONLY the summary text, nothing else.
+    as: ticket_summary
+
+  - type: llm.generate
+    prompt: |
+      Write a Jira ticket description for this message from {{reporter}} in #{{channel}}:
+
+      "{{message}}"
+
+      Format with:
+      - Steps to Reproduce (if applicable)
+      - Expected Behavior
+      - Actual Behavior
+      - Reporter and source channel
+
+      Return ONLY the description text.
+    as: ticket_description
+
+  - type: issues.create
+    project: "{{jira_project}}"
+    summary: "{{ticket_summary}}"
+    description: "{{ticket_description}}"
+    issue_type: "Bug"
+    as: ticket_key
+
+  - type: control.stop
+    message: |
+      Created {{ticket_key}}: {{ticket_summary}}

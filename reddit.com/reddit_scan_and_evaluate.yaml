@@ -1,0 +1,238 @@
+schema_version: 1
+version: "1.1.0"
+last_verified: "2026-02-03"
+id: reddit_scan_and_evaluate
+title: "Scan & Evaluate"
+description: "Batch-scan a subreddit feed — reads top threads, scores each against Strategy D, emits per-thread verdicts plus mood-matched draft comments for approval."
+overview: |
+  A batch engagement sweep. The workflow opens a subreddit feed, reads the top N threads, evaluates each one against the operator's engagement strategy, and returns a structured list of verdicts: which threads to skip and why, and which threads to comment on with a draft reply ready for approval.
+
+  Use this for scheduled community management, where a single dispatch replaces an hour of manual triage. The returned queue is designed to be reviewed by a human operator who approves or rejects each draft before any comment is actually posted.
+
+category:
+  level: automation
+  domain: social
+  reusable: false
+policies:
+  allowed_domains:
+    - old.reddit.com
+params:
+  subreddit: string
+  sort: string
+embed:
+  label: "Scan & Evaluate"
+  when: "#siteTable"
+  param_map:
+    subreddit: "{{_path.1}}"
+    sort: "{{_path.2}}"
+steps:
+  # ── Phase 1: Extract feed data (on current page) ──────────────────────
+
+  - type: browser.navigate
+    url: "https://old.reddit.com/r/{{subreddit}}/{{sort}}"
+
+  - type: browser.wait
+    selector: "#siteTable > .thing.link"
+    timeout: 10000
+
+  - type: browser.extractMap
+    selector: "#siteTable > .thing.link:not(.promoted)"
+    fields:
+      title:
+        selector: ".title a.title"
+      url:
+        selector: ".title a.title"
+        attribute: "href"
+      score:
+        selector: ".score.unvoted"
+        attribute: "title"
+      comments:
+        selector: ".comments"
+      author:
+        selector: ".author"
+      flair:
+        selector: ".linkflair-text"
+    as: feed
+
+  # Extract comment-page URLs (not title links — those go external on link posts)
+  - type: browser.extractAll
+    selector: "#siteTable > .thing.link:not(.promoted) .comments"
+    attribute: "href"
+    separator: "|||"
+    as: post_urls
+
+  # Extract fullnames for CSS targeting
+  - type: browser.extractAll
+    selector: "#siteTable > .thing.link:not(.promoted)"
+    attribute: "data-fullname"
+    separator: "|||"
+    as: post_fullnames
+
+  - type: variable.set
+    name: highlight_css
+    value: ""
+
+  - type: variable.set
+    name: mute_css
+    value: ""
+
+  - type: variable.set
+    name: evaluation
+    value: ""
+
+  - type: variable.set
+    name: score_css
+    value: ""
+
+  # ── Phase 2: Per-thread evaluate (foreach) ────────────────────────────
+
+  - type: control.foreach
+    items: "{{post_urls}}"
+    as: raw_url
+    separator: "|||"
+    index_as: "i"
+    max_items: 25
+    delay_ms: 500
+    continue_on_error: true
+    steps:
+      # Get fullname for this thread's index
+      - type: data.get
+        input: "{{post_fullnames}}"
+        separator: "|||"
+        index: "{{i}}"
+        as: current_fullname
+
+      # Read thread content via sub-workflow
+      - type: workflow.call
+        workflow: reddit_read_thread
+        params:
+          post_url: "{{raw_url}}"
+        as: current_thread
+        timeout: 15000
+
+      # Evaluate: verdict + importance in one call → "COMMENT|75" or "SKIP|20"
+      - type: llm.generate
+        prompt: |
+          Evaluate this Reddit thread for u/MxTide (Berlin indie dev, browser automation, Claude Code, MCP servers).
+
+          Strategy D criteria (all must pass for COMMENT):
+          - Post < 15 min old, 3+ early comments, projected < 20 final, < 10 current
+          - Topic matches MxTide credibility: Claude Code, MCP, browser automation, CLAUDE.md, cost/pricing
+          Skip signals (2+ = SKIP): sensational title + new account, universal topic, score > 20, 10+ comments on rising, hot take framing.
+
+          Importance 0-100: topic relevance to MxTide, thread timing, comment opportunity, visibility potential.
+
+          ---
+          title: {{current_thread.title}}
+          score: {{current_thread.score}}
+          author: {{current_thread.author}}
+          flair: {{current_thread.flair}}
+          comments: {{current_thread.comments}}
+          body: {{current_thread.body}}
+
+          Reply with EXACTLY: VERDICT|score|reason
+          reason: 5-10 words explaining why, no pipes, no quotes
+          Examples: COMMENT|82|direct MCP topic, early thread, good fit
+                    SKIP|15|generic AI discussion, no credibility match
+          Nothing else.
+        as: eval_raw
+
+      - type: data.get
+        input: "{{eval_raw}}"
+        separator: "|"
+        index: "0"
+        as: verdict
+
+      - type: data.get
+        input: "{{eval_raw}}"
+        separator: "|"
+        index: "1"
+        as: importance
+
+      - type: data.get
+        input: "{{eval_raw}}"
+        separator: "|"
+        index: "2"
+        as: resolution
+
+      # Score badge CSS (all checked threads)
+      - type: variable.set
+        name: score_css
+        value: "{{score_css}}\n.thing[data-fullname=\"{{current_fullname}}\"] { position: relative; }\n.thing[data-fullname=\"{{current_fullname}}\"]::before { content: \"{{importance}}\"; position: absolute; left: 0; top: 0; background: rgba(59,130,246,0.9); color: #fff; border-radius: 6px; padding: 4px 8px; font-size: 18px; font-weight: 800; z-index: 10; line-height: 1; }\n.thing[data-fullname=\"{{current_fullname}}\"]::after { content: \"{{resolution}}\"; position: absolute; right: 8px; top: 4px; background: #fff; color: #444; font-size: 13px; font-weight: 600; padding: 2px 6px; border-radius: 4px; max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; z-index: 10; }"
+
+      # If COMMENT: draft replies + highlight CSS
+      - type: control.if
+        condition: "{{verdict}} == 'COMMENT'"
+        then:
+          - type: workflow.call
+            workflow: reddit_persona_draft
+            params:
+              title: "{{current_thread.title}}"
+              score: "{{current_thread.score}}"
+              body: "{{current_thread.body}}"
+              comments: "{{current_thread.comments}}"
+              thread_comments: "{{current_thread.thread_comments}}"
+              instructions: ""
+              output_format: |
+                Output exactly 3 comment options in this format:
+
+                **Comment (recommended):** [Mood: X]
+                > draft
+
+                **Alternative A:** [Mood: Y]
+                > draft
+
+                **Alternative B:** [Mood: Z]
+                > draft
+            as: persona
+            timeout: 30000
+
+          - type: variable.set
+            name: highlight_css
+            value: "{{highlight_css}}\n.thing[data-fullname=\"{{current_fullname}}\"] { border-left: 4px solid #22c55e; background: rgba(34,197,94,0.08); }"
+
+          - type: variable.set
+            name: evaluation
+            value: "{{evaluation}}\n\n**Thread {{i}}: {{current_thread.title}}**\n**Link:** {{raw_url}}\n**Verdict:** COMMENT | **Importance:** {{importance}}/100\n**Score:** {{current_thread.score}} | **Comments:** {{current_thread.comments}}\n{{persona.draft}}"
+
+        else_steps:
+          - type: variable.set
+            name: mute_css
+            value: "{{mute_css}}\n.thing[data-fullname=\"{{current_fullname}}\"] > * { opacity: 0.4; }"
+
+          - type: variable.set
+            name: evaluation
+            value: "{{evaluation}}\n\n**Thread {{i}}: {{current_thread.title}}** — SKIP ({{importance}}/100)"
+
+  # ── Phase 3: Navigate back + inject CSS + output ──────────────────────
+
+  - type: browser.navigate
+    url: "https://old.reddit.com/r/{{subreddit}}/{{sort}}"
+
+  - type: browser.wait
+    selector: "#siteTable"
+    timeout: 10000
+
+  - type: control.if
+    condition: "{{mute_css}} != ''"
+    then:
+      - type: browser.injectCSS
+        id: "reddit-scan-mute"
+        css: "{{mute_css}}"
+
+  - type: control.if
+    condition: "{{highlight_css}} != ''"
+    then:
+      - type: browser.injectCSS
+        id: "reddit-scan-highlight"
+        css: "{{highlight_css}}"
+
+  - type: control.if
+    condition: "{{score_css}} != ''"
+    then:
+      - type: browser.injectCSS
+        id: "reddit-scan-scores"
+        css: "{{score_css}}"
+
+  - type: control.stop
+    message: "{{evaluation}}"

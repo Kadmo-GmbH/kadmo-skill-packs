@@ -1,0 +1,80 @@
+schema_version: 1
+version: "1.0.0"
+id: budget_allocator
+title: "Budget Allocation"
+description: "Recommend optimal budget allocation across channels based on historical performance, efficiency metrics, and business constraints."
+overview: |
+  An analytical chain that takes historical spend, conversion, and efficiency data plus a set of business constraints — minimum spend per channel, maximum weekly change, scaling caps — and recommends an optimal next-period budget split across the active channels. The output explains each channel's proposed change with the metric that drove it.
+
+  Use this during monthly or quarterly planning, when re-allocating after a performance shift, or when preparing a budget defense. The workflow does not push changes into ad platforms on its own; it produces the recommendation that a human or downstream workflow can execute.
+
+category:
+  level: task
+  domain: marketing
+  reusable: true
+params:
+  total_budget: string
+  channels: string
+  historical_performance: string
+  business_goal: string
+  constraints: string
+steps:
+  - type: llm.generate
+    prompt: |
+      You are a performance marketing strategist optimizing budget allocation.
+
+      **Total Budget:** {{total_budget}}
+      **Active Channels:** {{channels}}
+      **Historical Performance:** {{historical_performance}}
+      **Business Goal:** {{business_goal}}
+      **Constraints:** {{constraints}}
+
+      Analyze the data and recommend budget allocation using this framework:
+
+      1. **Efficiency Analysis**
+         - Calculate CPA/ROAS efficiency score per channel
+         - Identify channels at diminishing returns (rising marginal CPA)
+         - Identify channels with headroom (below-target CPA, impression share available)
+
+      2. **Allocation Method**
+         - Rank channels by marginal efficiency
+         - Allocate minimum viable spend per channel (floor for data sufficiency)
+         - Distribute remaining budget proportional to efficiency
+         - Reserve 10-15% for testing (new channels, campaigns, audiences)
+         - Apply any hard constraints from the brief
+
+      3. **Scenario Modeling**
+         - Scenario A: Efficiency-optimized (maximize conversions at target CPA)
+         - Scenario B: Growth-optimized (maximize volume, accept higher CPA)
+         - Scenario C: Balanced (compromise between efficiency and volume)
+
+      **Output format:**
+      ## Current State
+      [Table: Channel | Spend | Conversions | CPA | ROAS | Efficiency Score]
+
+      ## Recommended Allocation
+      [Table: Channel | Current $ | Recommended $ | Change % | Expected Impact]
+
+      ## Scenarios
+      ### Scenario A: Efficiency-Optimized
+      [Allocation + projected outcomes]
+
+      ### Scenario B: Growth-Optimized
+      [Allocation + projected outcomes]
+
+      ### Scenario C: Balanced
+      [Allocation + projected outcomes]
+
+      ## Recommendation
+      [Which scenario to implement and why]
+
+      ## Testing Budget
+      [How to allocate the 10-15% test budget]
+
+      ## Review Cadence
+      [When to reassess this allocation]
+    as: allocation
+
+  - type: variable.set
+    name: result
+    value: "{{allocation}}"

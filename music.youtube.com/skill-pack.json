@@ -1,0 +1,8 @@
+{
+  "name": "youtube-music",
+  "version": "1.0.0",
+  "title": "YouTube Music",
+  "description": "Playlist extraction and migration from YouTube Music",
+  "domain": "music.youtube.com",
+  "requires": { "browser": true, "llm": false }
+}

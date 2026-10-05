@@ -1,0 +1,210 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-08-17"
+id: kleinanzeigen_search
+title: "Kleinanzeigen: Newest-First Search"
+description: "Run a newest-first keyword search on Kleinanzeigen.de and return every result card as structured JSON — ad id, URL, title, price, posting time, location, escrow and shipping flags — with optional price cap and exclude-pattern filtering. Deterministic, no LLM call."
+overview: |
+  The sniping primitive. Opens `/s-sortierung:neueste/<keyword>/k0` (global keyword search,
+  newest first) and parses every `article[data-adid]` card into a row.
+
+  Returns `ad_id` as a stable primary key so a caller can diff successive runs and act only
+  on genuinely new listings. `posted` carries a time of day for today/yesterday ads, which
+  together with the escrow flag is what makes same-day sniping possible.
+
+  Filtering happens in-browser before the result is returned: `max_price` caps the price,
+  `exclude` drops rows whose title, URL slug, or teaser match a regex (the standard use is
+  screening out mislabelled variants, e.g. SO-DIMM laptop memory listed under desktop
+  searches), and `require_escrow` keeps only ads offering "Direkt kaufen" buyer protection.
+
+  **Coverage:** 25 cards per page. `max_pages` (default 1) reads further pages by fetching
+  them same-origin and parsing them detached — no navigation, sort order preserved. The
+  result reports `pages_read`, `total_results` and a `coverage` percentage so a caller can
+  see what it did not look at. For a polling loop on a low-volume keyword page 1 is the whole
+  useful window; raise `max_pages` for a first sweep of a busy keyword. Ordering is strictly
+  newest-first and no promoted ads were observed jumping the queue.
+
+  Availability is not asserted here — pass each interesting `url` to
+  `kleinanzeigen_vet_listing` before acting on it.
+
+category:
+  level: task
+  domain: research
+  reusable: true
+
+params:
+  keyword:
+    type: string
+    description: "Search term, hyphen-joined for multiple words, e.g. \"64gb-ddr5-2x32\""
+    required: true
+  max_price:
+    type: number
+    description: "Optional cap in EUR. Rows without a parseable price are dropped when set."
+    required: false
+  exclude:
+    type: string
+    description: "Optional case-insensitive regex; drops rows matching on title, URL slug, or teaser. E.g. \"SO-?DIMM|Notebook\""
+    required: false
+  require_escrow:
+    type: boolean
+    description: "When true, keep only listings offering \"Direkt kaufen\" (buyer protection)."
+    required: false
+  max_pages:
+    type: number
+    description: "How many result pages to read (25 cards each). Default 1. Pages beyond the first are fetched same-origin and parsed in the browser."
+    required: false
+
+policies:
+  allowed_domains:
+    - "kleinanzeigen.de"
+    - "*.kleinanzeigen.de"
+
+steps:
+  - type: browser.navigate
+    url: "https://www.kleinanzeigen.de/s-sortierung:neueste/{{keyword}}/k0"
+
+  # Wait on body, not on a card: a keyword with zero hits never renders one, and
+  # waiting for it would fail the run instead of reporting "nothing found".
+  # Pages are server-rendered, so body implies the results markup is present.
+  - type: browser.wait
+    selector: body
+    timeout: 15000
+
+  - type: browser.wait
+    ms: 500
+
+  - type: browser.injectJS
+    id: sb-kleinanzeigen-search-parse
+    as: results_json
+    js: |
+      (async () => {
+        const ORIGIN = 'https://www.kleinanzeigen.de';
+
+        // Empty interpolation for an omitted optional param yields "" -> falsy/NaN.
+        const MAX_PRICE = parseInt("{{max_price}}", 10);
+        const REQUIRE_ESCROW = "{{require_escrow}}" === "true";
+
+        // String.raw so regex escapes survive interpolation. In a normal string
+        // literal a pattern like `PC\b` would be parsed as a JS escape and the
+        // word boundary would silently become a backspace character, which fails
+        // open — the row is kept instead of filtered.
+        // An omitted optional param can arrive as the literal "{{name}}" rather
+        // than an empty string. Left unchecked that becomes a live regex.
+        const unset = (v) => !v || /^\{\{.*\}\}$/.test(v);
+        const EXCLUDE_RAW = String.raw`{{exclude}}`;
+        const EXCLUDE = unset(EXCLUDE_RAW) ? '' : EXCLUDE_RAW;
+        let rx = null;
+        if (EXCLUDE) { try { rx = new RegExp(EXCLUDE, 'i'); } catch (e) { rx = null; } }
+
+        // article[data-adid] is the post-2026-08 card root. The legacy .aditem /
+        // .aditem-main--* classes were removed in the utility-CSS migration and
+        // now match nothing, so never reintroduce them here.
+        const parseCards = (root) => Array.from(root.querySelectorAll('article[data-adid]')).map(card => {
+          const cardText = (card.textContent || '').replace(/\s+/g, ' ');
+
+          // Leaf text nodes only — avoids swallowing nested badge/icon markup.
+          const leaves = Array.from(card.querySelectorAll('span,p,a'))
+            .filter(e => e.childElementCount === 0)
+            .map(e => (e.textContent || '').replace(/\s+/g, ' ').trim())
+            .filter(Boolean);
+
+          // Per-card JSON-LD is an ImageObject: reliable `title`, but no price.
+          let title = null;
+          const ld = card.querySelector('script[type="application/ld+json"]');
+          if (ld) { try { title = (JSON.parse(ld.textContent) || {}).title || null; } catch (e) {} }
+          // Fallback: longest anchor text — the first anchor is the image tile,
+          // whose text is just the photo count.
+          if (!title) {
+            const anchors = Array.from(card.querySelectorAll('a'))
+              .map(a => (a.textContent || '').replace(/\s+/g, ' ').trim());
+            title = anchors.sort((a, b) => b.length - a.length)[0] || null;
+          }
+
+          const priceTxt = leaves.find(t => /€|Zu verschenken/.test(t)) || '';
+          const num = priceTxt.match(/(\d{1,3}(?:\.\d{3})*|\d+)\s*€/);
+          const href = (card.getAttribute('data-href') || '').split('?')[0];
+          const teaser = leaves.find(t => t.length > 60) || null;
+
+          return {
+            ad_id: card.getAttribute('data-adid'),
+            url: href ? ORIGIN + href : null,
+            title: title,
+            price_eur: num ? parseInt(num[1].replace(/\./g, ''), 10) : null,
+            negotiable: /\bVB\b/.test(priceTxt),
+            posted: leaves.find(t => /^(Heute|Gestern),|^\d{2}\.\d{2}\.\d{4}$/.test(t)) || null,
+            location: leaves.find(t => /^\d{5}\s+\S/.test(t)) || null,
+            escrow: /Direkt kaufen/.test(cardText),
+            shipping: /Versand möglich/.test(cardText),
+            teaser: teaser ? teaser.slice(0, 140) : null
+          };
+        });
+
+        // Page 1 is the live DOM. Further pages are fetched same-origin and
+        // parsed detached — cheaper and less disruptive than navigating, and the
+        // sort token is preserved in the paged URL.
+        const MAX_PAGES = Math.max(1, Math.min(20, parseInt("{{max_pages}}", 10) || 1));
+
+        // Requesting a page past the last one re-serves the final page, so the
+        // same ads come back repeatedly. Dedupe on ad_id and stop as soon as a
+        // page adds nothing new.
+        const rows = [];
+        const seen = new Set();
+        const addUnique = (list) => {
+          let added = 0;
+          for (const r of list) {
+            if (r.ad_id && !seen.has(r.ad_id)) { seen.add(r.ad_id); rows.push(r); added++; }
+          }
+          return added;
+        };
+
+        addUnique(parseCards(document));
+        let pagesRead = 1;
+        let totalResults = null;
+
+        const h1 = (document.querySelector('h1') || {}).textContent || '';
+        const totalMatch = h1.replace(/\s+/g, ' ').match(/von\s+([\d.]+)\s+Ergebnis/i);
+        if (totalMatch) totalResults = parseInt(totalMatch[1].replace(/\./g, ''), 10);
+
+        for (let p = 2; p <= MAX_PAGES; p++) {
+          try {
+            const res = await fetch('/s-seite:' + p + '/sortierung:neueste/{{keyword}}/k0', { credentials: 'same-origin' });
+            if (!res.ok) break;
+            const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+            const more = parseCards(doc);
+            if (!more.length) break;
+            if (addUnique(more) === 0) break;   // past the last page — same ads again
+            pagesRead = p;
+          } catch (e) { break; }
+        }
+
+        const kept = rows.filter(r => {
+          if (!r.ad_id) return false;
+          if (!isNaN(MAX_PRICE) && (r.price_eur === null || r.price_eur > MAX_PRICE)) return false;
+          if (REQUIRE_ESCROW && !r.escrow) return false;
+          if (rx && (rx.test(r.title || '') || rx.test(r.url || '') || rx.test(r.teaser || ''))) return false;
+          return true;
+        });
+
+        return JSON.stringify({
+          query: "{{keyword}}",
+          sort: 'neueste',
+          pages_read: pagesRead,
+          total_results: totalResults,
+          coverage: totalResults ? Math.min(100, Math.round(rows.length / totalResults * 100)) + '%' : null,
+          scanned: rows.length,
+          kept: kept.length,
+          filters: {
+            max_price: isNaN(MAX_PRICE) ? null : MAX_PRICE,
+            exclude: EXCLUDE || null,
+            require_escrow: REQUIRE_ESCROW,
+            max_pages: MAX_PAGES
+          },
+          note: rows.length === 0
+            ? 'No results for this keyword — check spelling and that the slug is hyphen-joined.'
+            : 'Availability is not asserted here — confirm each url with kleinanzeigen_vet_listing before acting.',
+          listings: kept
+        });
+      })();
+
+  - type: control.stop
+    message: "{{results_json}}"

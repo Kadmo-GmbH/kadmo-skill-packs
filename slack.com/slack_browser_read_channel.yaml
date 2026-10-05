@@ -1,0 +1,27 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-02-09"
+id: slack_browser_read_channel
+title: "Browser: Read Channel"
+description: "Navigate to a Slack channel and snapshot recent messages"
+overview: |
+  Opens a Slack channel and captures the most recent messages as a structured snapshot — sender, timestamp, message body, reaction counts, and any thread-reply indicators. The number of messages captured can be tuned by the caller; the default returns enough history to drive a triage or summarisation step.
+
+  Because it uses the browser rather than the Slack API, it works without workspace-level app installation and reflects only what the current logged-in user can actually see. Use it as the perception step in front of any Slack response or triage workflow.
+
+category:
+  level: task
+  domain: ops
+  reusable: true
+params:
+  channel: string
+steps:
+  - type: browser.navigate
+    url: "{{env.SLACK_BROWSER_URL}}/{{channel}}"
+
+  - type: browser.wait
+    ms: 3000
+
+  - type: browser.snapshot
+    as: channel_messages
+    includeContent: true

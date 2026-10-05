@@ -1,0 +1,70 @@
+schema_version: 1
+version: "1.0.0"
+id: friction_audit_engine
+title: "Landing Page Friction Audit"
+description: "Score a landing page across 7 friction types using severity-weighted rubric. Outputs prioritized fix list with expected conversion lift."
+overview: |
+  A conversion-optimisation chain that scores a live landing page against seven well-known friction categories — clarity, trust, form length, performance, mobile fit, call-to-action strength, and information architecture. Each issue is assigned a severity weight, and the output is a prioritised fix list with an estimated conversion lift per fix.
+
+  Run it before a paid traffic ramp, during a CRO quarterly planning cycle, or when a landing page is underperforming its benchmarks. The output is deliberately actionable: each finding points to a specific element and proposes a concrete change.
+
+category:
+  level: task
+  domain: marketing
+  reusable: true
+params:
+  page_description: string
+  ad_copy: string
+  current_metrics: string
+steps:
+  - type: llm.generate
+    prompt: |
+      You are a CRO specialist conducting a friction audit on a landing page.
+
+      **Page description:** {{page_description}}
+      **Ad copy driving traffic:** {{ad_copy}}
+      **Current metrics:** {{current_metrics}}
+
+      Score the page across 7 friction types. For each, rate severity 1-10 and estimate conversion impact.
+
+      **Friction Types:**
+      1. **Navigation friction** — Full site nav, too many links, competing CTAs
+      2. **Copy friction** — Vague headline, jargon, no clear benefit, message mismatch with ad
+      3. **Visual friction** — Cluttered layout, unclear hierarchy, slow images
+      4. **Form friction** — Too many fields, unclear labels, no progress indicator
+      5. **Trust friction** — No social proof, no security badges, no privacy assurance
+      6. **CTA friction** — Vague button text, below fold, multiple competing CTAs
+      7. **Speed friction** — Page loads >3 seconds, render-blocking scripts
+
+      **Message Match Check:**
+      Score ad-to-page message match (Strong/Moderate/Weak):
+      - Does page headline echo ad headline benefit?
+      - Does page offer match ad offer exactly?
+      - Is there visual continuity?
+
+      **Output format:**
+
+      ## Message Match Score: [Strong/Moderate/Weak]
+      [Specific mismatches identified]
+
+      ## Friction Scores
+      | Friction Type | Severity (1-10) | Evidence | Est. CVR Impact |
+      [7 rows]
+
+      ## Overall Friction Score: [sum/70]
+      [Interpretation: <20 = low friction, 20-35 = moderate, 35-50 = high, >50 = critical]
+
+      ## Prioritized Fixes (by ICE score)
+      | Fix | Impact | Confidence | Ease | ICE Score | Est. Lift |
+      [Top 5-8 fixes ranked by ICE]
+
+      ## Quick Wins (implement today)
+      [Fixes with Ease >= 8]
+
+      ## Test Recommendations
+      [Top 3 A/B tests to run, with hypothesis for each]
+    as: audit_result
+
+  - type: variable.set
+    name: result
+    value: "{{audit_result}}"

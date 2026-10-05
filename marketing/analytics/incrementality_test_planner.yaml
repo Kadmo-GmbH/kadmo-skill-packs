@@ -1,0 +1,79 @@
+schema_version: 1
+version: "1.0.0"
+id: incrementality_test_planner
+title: "Incrementality Test Planner"
+description: "Design an incrementality test with power calculation, market selection, duration, and analysis methodology. Supports geo-lift, platform lift, and on/off tests."
+overview: |
+  A design-phase chain for incrementality testing. Inputs describe the channel under test, expected effect size, and available geographies or audience segments; the workflow responds with a statistically sound test plan — recommended test and control groups, required duration, power calculation, and the analysis method that should be used to read the results.
+
+  It supports the three most common designs: geo-lift, platform lift, and on/off holdouts. Use it before any incrementality test is launched to avoid underpowered reads or misattributed results, and to produce documentation a stakeholder can sign off on.
+
+category:
+  level: task
+  domain: marketing
+  reusable: true
+params:
+  channel_to_test: string
+  current_spend: string
+  current_cpa: string
+  available_geos: string
+  business_context: string
+steps:
+  - type: llm.generate
+    prompt: |
+      You are a measurement specialist designing an incrementality test.
+
+      **Channel to test:** {{channel_to_test}}
+      **Current monthly spend:** {{current_spend}}
+      **Current CPA:** {{current_cpa}}
+      **Available geos/markets:** {{available_geos}}
+      **Business context:** {{business_context}}
+
+      Select the best test type and design it:
+
+      **Test type selection:**
+      - Geo-lift: best for channel-level incrementality (need 10+ geos, 6mo+ history)
+      - Platform conversion lift: best for campaign-level (Meta: $5K+ annual, 100+ conv/week; Google: $5K+)
+      - On/off test: simplest, bluntest (willingness to lose channel revenue for 2-4 weeks)
+
+      **Output format:**
+
+      ## Recommended Test Type: [type]
+      [Rationale for selection]
+
+      ## Test Design
+      - **Test group:** [markets/audience]
+      - **Control group:** [markets/audience]
+      - **Holdout %:** [percentage with rationale]
+      - **Duration:** [weeks, with minimum full purchase cycle covered]
+      - **Budget impact:** [spend during test period]
+
+      ## Power Analysis
+      - **Baseline conversion rate:** [from current data]
+      - **Minimum Detectable Effect:** [smallest meaningful lift]
+      - **Required sample size:** [per group, using two-proportion z-test if user-level]
+      - **Expected power:** [target 80%]
+      - **Significance level:** [alpha = 0.10 for geo, 0.05 for user-level]
+
+      ## Pre-Test Requirements
+      - [ ] Historical data available (min 6 months for geo, 2-4 weeks for platform)
+      - [ ] Conversion tracking verified
+      - [ ] Control/test groups balanced on key metrics
+      - [ ] Other marketing channels held constant
+      - [ ] Suppression mechanism tested
+
+      ## Analysis Plan
+      - **Primary metric:** [conversions, revenue, CPA]
+      - **Statistical method:** [synthetic control for geo, platform-reported for lift, DID for on/off]
+      - **When to read results:** [minimum duration before analysis]
+      - **Inconclusive criteria:** [when to extend or redesign]
+
+      ## Expected Outcomes
+      - **If incremental:** Implications for budget allocation
+      - **If not incremental:** Implications for channel strategy
+      - **If inconclusive:** Next steps (extend, increase holdout, try different method)
+    as: test_plan
+
+  - type: variable.set
+    name: result
+    value: "{{test_plan}}"

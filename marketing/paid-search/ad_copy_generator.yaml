@@ -1,0 +1,83 @@
+schema_version: 1
+version: "1.0.0"
+id: ad_copy_generator
+title: "RSA Ad Copy Generator"
+description: "Generate Responsive Search Ad headlines and descriptions from a product/offer brief. Outputs 15 headlines and 4 descriptions per ad group following proven frameworks."
+overview: |
+  Given a structured brief for a product, offer, ad group theme, and proof points, this workflow drafts a complete Responsive Search Ad set: fifteen headlines and four descriptions per ad group. The headlines are distributed across proven frameworks — keyword match, benefit lead, social proof, CTA — so the resulting asset library gives Google Ads genuine combinations to test.
+
+  Character limits are respected, Google Ads policy checks are applied, and pin recommendations are produced alongside extension suggestions. Use it when launching a new campaign, refreshing an underperforming ad group, or preparing a swap during seasonal promotions.
+
+category:
+  level: task
+  domain: marketing
+  reusable: true
+params:
+  product_brief: string
+  ad_group_theme: string
+  target_audience: string
+  key_benefits: string
+  proof_points: string
+  offer: string
+steps:
+  - type: llm.generate
+    prompt: |
+      You are a paid search copywriter creating Responsive Search Ads (RSAs).
+
+      **Product/Service:** {{product_brief}}
+      **Ad Group Theme:** {{ad_group_theme}}
+      **Target Audience:** {{target_audience}}
+      **Key Benefits:** {{key_benefits}}
+      **Proof Points:** {{proof_points}}
+      **Offer:** {{offer}}
+
+      Generate exactly 15 headlines (max 30 characters each) and 4 descriptions (max 90 characters each).
+
+      **Headline distribution:**
+      - Headlines 1-3: Include the ad group theme keyword naturally
+      - Headlines 4-6: Lead with a key benefit or outcome
+      - Headlines 7-8: Include social proof (numbers, awards, ratings)
+      - Headlines 9-10: Call-to-action focused
+      - Headlines 11-12: Offer or pricing detail
+      - Headline 13: Brand name + category
+      - Headline 14: Dynamic keyword insertion {KeyWord:Default}
+      - Headline 15: Unique differentiator
+
+      **Description distribution:**
+      - Description 1: Primary benefit + CTA
+      - Description 2: Key feature + proof point
+      - Description 3: Trust signal + differentiator
+      - Description 4: Offer detail + urgency or CTA
+
+      **Rules:**
+      - Every headline must be ≤30 characters (COUNT CAREFULLY)
+      - Every description must be ≤90 characters (COUNT CAREFULLY)
+      - No exclamation marks in headlines (Google policy)
+      - No ALL CAPS words
+      - Vary sentence structure across headlines
+      - Use specific numbers over vague claims
+      - Include the primary keyword in at least 3 headlines
+
+      **Output format:**
+      ## Headlines
+      | # | Type | Text | Chars |
+      |---|------|------|-------|
+      [15 rows]
+
+      ## Descriptions
+      | # | Type | Text | Chars |
+      |---|------|------|-------|
+      [4 rows]
+
+      ## Pin Recommendations
+      [Which headlines to pin to positions 1/2, if any, and why]
+
+      ## Extension Suggestions
+      - Sitelinks: [4 suggestions]
+      - Callouts: [4 suggestions]
+      - Structured snippets: [1 header + 3 values]
+    as: ad_copy
+
+  - type: variable.set
+    name: result
+    value: "{{ad_copy}}"

@@ -1,0 +1,81 @@
+schema_version: 1
+version: "1.0.0"
+id: keyword_research_engine
+title: "Keyword Research Engine"
+description: "Build a keyword universe from product brief. Outputs clustered keyword list with intent classification, match types, and Keyword Opportunity Scores."
+overview: |
+  Starting from a product or offer brief, this chain constructs the full keyword universe for a paid-search account: seed expansion, intent classification, clustering, match-type recommendations, and an opportunity score derived from volume, competition, and estimated cost. The output is structured so it can be pasted directly into Google Ads or a bid-management tool.
+
+  Run it when launching a new market, entering a new product line, or re-baselining an existing account. The resulting clusters double as the input for the ad-copy generator workflow, keeping theme grouping consistent across research and creative.
+
+category:
+  level: task
+  domain: marketing
+  reusable: true
+params:
+  product_brief: string
+  target_audience: string
+  competitors: string
+  geo: string
+steps:
+  - type: llm.generate
+    prompt: |
+      You are a paid search keyword researcher building a keyword universe.
+
+      **Product/service:** {{product_brief}}
+      **Target audience:** {{target_audience}}
+      **Competitors:** {{competitors}}
+      **Target geography:** {{geo}}
+
+      Follow the 5-step keyword research methodology:
+
+      **Step 1 — Plant Seeds**
+      Generate 15-20 seed keywords across three angles:
+      - Product-based (what you sell)
+      - Problem-based (what customers struggle with)
+      - Solution-based (what outcome they want)
+
+      **Step 2 — Expand**
+      For each seed, generate expanded keywords using:
+      - Modifier layering (buy, best, how to, near me, review, price, vs)
+      - Question prefixes (who/what/when/where/why/how)
+      - Long-tail variations (3+ words)
+      Target 100-300 total keywords.
+
+      **Step 3 — Classify Intent**
+      Score each keyword:
+      - Transactional (buy/price/cost/near me): Intent Score = 3
+      - Commercial Investigation (best/review/comparison): Intent Score = 2
+      - Informational (how to/what is): Intent Score = 0.5 (likely exclude from PPC)
+
+      **Step 4 — Prioritize**
+      Calculate Keyword Opportunity Score:
+      KOS = (Est. Volume × Intent Score) / (Competition × Est. CPC)
+      Rank and select top quartile.
+
+      **Step 5 — Cluster & Assign**
+      Group into ad group themes (10-20 keywords per group).
+      Assign match types: Exact for high-intent proven terms, Phrase for controlled expansion.
+
+      **Output format:**
+
+      ## Seed Keywords
+      [Table: Seed | Angle (Product/Problem/Solution)]
+
+      ## Keyword Universe (top 50 by KOS)
+      | Keyword | Intent | Intent Score | Est. Volume | Competition | KOS | Match Type | Ad Group |
+
+      ## Ad Group Structure
+      | Ad Group Name | Keywords | Theme | Recommended Match Types |
+
+      ## Negative Keywords
+      [Universal negatives + vertical-specific negatives]
+
+      ## Next Steps
+      - Search term review cadence
+      - Expansion opportunities identified
+    as: keyword_list
+
+  - type: variable.set
+    name: result
+    value: "{{keyword_list}}"

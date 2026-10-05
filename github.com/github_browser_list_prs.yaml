@@ -1,0 +1,27 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-02-09"
+id: github_browser_list_prs
+title: "Browser: List PRs"
+description: "Navigate to a GitHub repository's PR list and snapshot"
+overview: |
+  Opens a repository's Pull Requests tab, applies the requested filters — open, closed, by author, by label, by review status — and returns a structured snapshot of the visible rows. Each row includes PR number, title, author, draft flag, review decision, CI status summary, and target branch.
+
+  Use it as the opening step of a review sweep, a weekly merge report, or any chain that iterates over PRs. Because it drives the browser rather than the REST API, it reflects exactly what the filter URL would show a human, including the effects of private-repo access rules.
+
+category:
+  level: task
+  domain: engineering
+  reusable: true
+params:
+  repo: string
+steps:
+  - type: browser.navigate
+    url: "{{env.GITHUB_BROWSER_URL}}/{{repo}}/pulls"
+
+  - type: browser.wait
+    ms: 3000
+
+  - type: browser.snapshot
+    as: pr_list
+    includeContent: true

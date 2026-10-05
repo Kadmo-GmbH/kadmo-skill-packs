@@ -1,0 +1,14 @@
+{
+  "name": "jira",
+  "version": "1.0.2",
+  "title": "Jira Cloud",
+  "description": "Issue tracking, sprint management, and ticket automation for Jira",
+  "domain": "atlassian.net",
+  "requires": {
+    "browser": true,
+    "llm": true
+  },
+  "roles": [
+    "se"
+  ]
+}

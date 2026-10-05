@@ -1,0 +1,317 @@
+{
+  "version": 1,
+  "name": "Kadmo Skill Packs",
+  "packs": [
+    {
+      "name": "google-ads",
+      "domain": "ads.google.com",
+      "version": "1.0.0",
+      "title": "Google Ads Search Platform",
+      "description": "Search campaign management, ad optimization, keyword diagnostics, and bid strategy for Google Ads",
+      "path": "ads.google.com",
+      "requires": {
+        "browser": true,
+        "llm": true
+      },
+      "roles": [
+        "analyst"
+      ]
+    },
+    {
+      "name": "airbnb",
+      "domain": "airbnb.com",
+      "version": "0.1.0",
+      "title": "Airbnb Vacation Rentals",
+      "description": "Search, filter, and inspect short-term vacation rental listings on Airbnb",
+      "path": "airbnb.com",
+      "requires": {
+        "browser": true,
+        "llm": false
+      }
+    },
+    {
+      "name": "jira",
+      "domain": "atlassian.net",
+      "version": "1.0.2",
+      "title": "Jira Cloud",
+      "description": "Issue tracking, sprint management, and ticket automation for Jira",
+      "path": "atlassian.net",
+      "requires": {
+        "browser": true,
+        "llm": true
+      },
+      "roles": [
+        "se"
+      ]
+    },
+    {
+      "name": "booking",
+      "domain": "booking.com",
+      "version": "0.1.0",
+      "title": "Booking.com Vacation Stays",
+      "description": "Search vacation homes and accommodations on Booking.com with property-type and location filters",
+      "path": "booking.com",
+      "requires": {
+        "browser": true,
+        "llm": false
+      }
+    },
+    {
+      "name": "elixir",
+      "domain": "elixir",
+      "version": "1.0.0",
+      "title": "Elixir Foundations",
+      "description": "Generic Elixir/Phoenix framework knowledge for coding agents — language reading essentials, OTP, mix and ExUnit quality gates, Phoenix/Ecto foundations, Absinthe GraphQL, and toolchain setup on a runner. Verified by execution; no application-specific claims.",
+      "path": "elixir",
+      "requires": {
+        "browser": false,
+        "llm": false
+      },
+      "roles": []
+    },
+    {
+      "name": "fewo-direkt",
+      "domain": "fewo-direkt.de",
+      "version": "0.1.0",
+      "title": "Fewo-direkt Vacation Rentals",
+      "description": "Search vacation rental listings on Fewo-direkt.de, the German Vrbo/Expedia portal",
+      "path": "fewo-direkt.de",
+      "requires": {
+        "browser": true,
+        "llm": false
+      }
+    },
+    {
+      "name": "figma-design-handoff",
+      "domain": "figma.com",
+      "version": "1.0.0",
+      "title": "Figma Design Handoff",
+      "description": "Read a Figma frame link through the workspace's figma MCP server, as the account's connected Figma user, and build the screen in the repo's own stack: the link grammar, the portal-delivered token, the request budget, the one-question rule and the never-rules.",
+      "path": "figma.com",
+      "requires": {
+        "browser": false,
+        "llm": true
+      },
+      "roles": [
+        "se"
+      ]
+    },
+    {
+      "name": "github",
+      "domain": "github.com",
+      "version": "1.0.0",
+      "title": "GitHub Platform",
+      "description": "PR review, issue management, and release automation for GitHub",
+      "path": "github.com",
+      "requires": {
+        "browser": true,
+        "llm": true
+      },
+      "roles": [
+        "se"
+      ]
+    },
+    {
+      "name": "graphql",
+      "domain": "graphql",
+      "version": "1.0.0",
+      "title": "GraphQL Client Integration",
+      "description": "The client side of a typed GraphQL seam — Apollo Client 4 migration traps, mutations and cache rules, typed codegen (and the two vendors' opposing guidance), and the three-check schema-drift pipeline that catches what document validation is blind to.",
+      "path": "graphql",
+      "requires": {
+        "browser": false,
+        "llm": false
+      },
+      "roles": []
+    },
+    {
+      "name": "immoscout24",
+      "domain": "immobilienscout24.de",
+      "version": "0.1.0",
+      "title": "ImmoScout24 Real Estate",
+      "description": "Search rentals, purchases, and short-stay listings on Germany's largest real estate portal",
+      "path": "immobilienscout24.de",
+      "requires": {
+        "browser": true,
+        "llm": false
+      }
+    },
+    {
+      "name": "kleinanzeigen",
+      "domain": "kleinanzeigen.de",
+      "version": "0.2.0",
+      "title": "Kleinanzeigen Classifieds",
+      "description": "Browse, search, and vet classified listings on Kleinanzeigen.de — Germany's general-purpose marketplace and rentals board. Includes newest-first search extraction and listing vetting for scarce-supply sniping.",
+      "path": "kleinanzeigen.de",
+      "requires": {
+        "browser": true,
+        "llm": false
+      },
+      "roles": [
+        "snipe"
+      ]
+    },
+    {
+      "name": "marketing",
+      "domain": "marketing",
+      "version": "1.0.0",
+      "title": "Performance Marketing",
+      "description": "Campaign management, media buying, analytics, and conversion optimization for paid search, paid social, display/programmatic, landing pages, and email sequences.",
+      "path": "marketing",
+      "requires": {
+        "browser": false,
+        "llm": true
+      },
+      "roles": [
+        "media-buyer",
+        "analyst"
+      ]
+    },
+    {
+      "name": "mui",
+      "domain": "mui",
+      "version": "1.0.0",
+      "title": "MUI Breaking Changes",
+      "description": "What an agent writing React against MUI gets wrong from training-data drift — Material UI v5→v9 and MUI X v8 breaking changes, the version-pinned docs trap, Grid/slots/theming API deltas, licensing tiers, and TypeScript augmentation moves. Registry-verified.",
+      "path": "mui",
+      "requires": {
+        "browser": false,
+        "llm": false
+      },
+      "roles": []
+    },
+    {
+      "name": "youtube-music",
+      "domain": "music.youtube.com",
+      "version": "1.0.0",
+      "title": "YouTube Music",
+      "description": "Playlist extraction and migration from YouTube Music",
+      "path": "music.youtube.com",
+      "requires": {
+        "browser": true,
+        "llm": false
+      }
+    },
+    {
+      "name": "reddit",
+      "domain": "reddit.com",
+      "version": "1.0.0",
+      "title": "Reddit Community",
+      "description": "Feed scanning, thread analysis, and comment drafting for Reddit",
+      "path": "reddit.com",
+      "requires": {
+        "browser": true,
+        "llm": true
+      },
+      "roles": [
+        "smm"
+      ]
+    },
+    {
+      "name": "schufa",
+      "domain": "schufa.de",
+      "version": "0.1.0",
+      "title": "Schufa Credit Bureau",
+      "description": "Knowledge pack for app.schufa.de — Germany's consumer credit bureau self-service portal. Documents the 2026 12-factor score methodology with full tier tables, contract entries, inquiry types, identity protection, and data correction flows.",
+      "path": "schufa.de",
+      "requires": {
+        "browser": true,
+        "llm": false
+      },
+      "roles": []
+    },
+    {
+      "name": "sepa-datev",
+      "domain": "sepa-datev",
+      "version": "1.0.0",
+      "title": "SEPA Direct Debit & DATEV Export",
+      "description": "German-market payment-rails and accounting-export knowledge for QA and SE agents — pain.008 structure and character rules, mandate lifecycle and sequence types, R-transaction reason codes, IBAN/Creditor-ID validation, DATEV EXTF format, SKR charts and non-profit tax spheres, with a synthetic fixture matrix. Verified against EPC and DATEV primary sources.",
+      "path": "sepa-datev",
+      "requires": {
+        "browser": false,
+        "llm": false
+      },
+      "roles": []
+    },
+    {
+      "name": "slack",
+      "domain": "slack.com",
+      "version": "1.0.0",
+      "title": "Slack Workspace",
+      "description": "Channel reading, message posting, and thread management for Slack",
+      "path": "slack.com",
+      "requires": {
+        "browser": true,
+        "llm": false
+      },
+      "roles": [
+        "pm"
+      ]
+    },
+    {
+      "name": "spotify",
+      "domain": "spotify.com",
+      "version": "1.0.0",
+      "title": "Spotify Music",
+      "description": "Song search, playlist import, and music migration for Spotify",
+      "path": "spotify.com",
+      "requires": {
+        "browser": true,
+        "llm": false
+      }
+    },
+    {
+      "name": "storybook",
+      "domain": "storybook",
+      "version": "1.0.0",
+      "title": "Storybook Testing Workflow",
+      "description": "Storybook as a review artefact and a test gate — current-major setup (v9/v10 package moves), CSF 3 stories, play-function interaction tests, the Vitest addon gate, the a11y ratchet, and what snapshot and visual checks do and do not cover.",
+      "path": "storybook",
+      "requires": {
+        "browser": false,
+        "llm": false
+      },
+      "roles": []
+    },
+    {
+      "name": "traum-ferienwohnungen",
+      "domain": "traum-ferienwohnungen.de",
+      "version": "0.1.0",
+      "title": "Traum-Ferienwohnungen Site",
+      "description": "German vacation rental marketplace by Oyo — homepage and search shell only",
+      "path": "traum-ferienwohnungen.de",
+      "requires": {
+        "browser": true,
+        "llm": false
+      }
+    },
+    {
+      "name": "wikipedia",
+      "domain": "wikipedia.org",
+      "version": "1.0.0",
+      "title": "Wikipedia",
+      "description": "Article extraction and summarization from Wikipedia",
+      "path": "wikipedia.org",
+      "requires": {
+        "browser": true,
+        "llm": true
+      }
+    },
+    {
+      "name": "writing",
+      "domain": "writing",
+      "version": "1.0.0",
+      "title": "Writing Standards",
+      "description": "Content creation, editing, and quality assurance. Copywriting frameworks, structured editing methodology, content strategy, social content, and AI writing pattern detection.",
+      "path": "writing",
+      "requires": {
+        "browser": false,
+        "llm": true
+      },
+      "roles": [
+        "writer",
+        "editor"
+      ]
+    }
+  ]
+}

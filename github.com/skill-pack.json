@@ -1,0 +1,9 @@
+{
+  "name": "github",
+  "version": "1.0.0",
+  "title": "GitHub Platform",
+  "description": "PR review, issue management, and release automation for GitHub",
+  "domain": "github.com",
+  "requires": { "browser": true, "llm": true },
+  "roles": ["se"]
+}

@@ -1,0 +1,72 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-02-08"
+id: slack_triage
+title: "Triage Message"
+description: "Understands a Slack message and decides what to do. The LLM picks an action based on role context — SE might create a ticket, Sales might just respond. Zero hardcoded branching."
+overview: |
+  An open-ended triage workflow. The agent reads a Slack message, understands its intent, and decides the right action based on the role context that is currently loaded — an SE agent might convert the message into a Jira ticket, a sales agent might reply with qualifying questions, a PM agent might thread it into a broader initiative. Every role shapes the action differently.
+
+  The workflow contains no hardcoded branching; the decision is driven by the injected role. Use it as the default entry point for any inbound message that a human has not already categorised, and connect the chosen action to downstream workflows that can execute it.
+
+category:
+  level: task
+  domain: ops
+  reusable: true
+params:
+  message:
+    type: string
+    description: "The Slack message to triage"
+  channel:
+    type: string
+    description: "Slack channel where the message was posted"
+    default: "engineering"
+  reporter:
+    type: string
+    description: "Name of the person who posted the message"
+    default: "User"
+  jira_project:
+    type: string
+    description: "Jira project key for ticket creation (e.g. SB, ENG)"
+steps:
+  # Step 1: Understand — what kind of message is this?
+  - type: llm.classify
+    input: |
+      Message from {{reporter}} in #{{channel}}:
+
+      "{{message}}"
+    categories:
+      - "bug_report"
+      - "feature_request"
+      - "question"
+      - "general"
+    as: message_type
+
+  # Step 2: Decide — given who you are, what should you do about it?
+  - type: llm.decide
+    input: |
+      {{reporter}} posted in #{{channel}} (classified as {{message_type}}):
+
+      "{{message}}"
+    actions:
+      - id: jira_create_from_message
+        description: "Create a Jira ticket to track and resolve this issue"
+      - id: slack_respond
+        description: "Respond to the message without taking further action"
+    as: action
+
+  # Step 3: Execute — call whatever the LLM chose
+  - type: workflow.call
+    workflow: "{{action}}"
+    params:
+      message: "{{message}}"
+      reporter: "{{reporter}}"
+      channel: "{{channel}}"
+      jira_project: "{{jira_project}}"
+    as: result
+
+  - type: control.stop
+    message: |
+      TRIAGE: {{message_type}}
+      ACTION: {{action}}
+      RESULT: {{result}}

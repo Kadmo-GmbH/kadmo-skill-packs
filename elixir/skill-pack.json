@@ -1,0 +1,13 @@
+{
+  "name": "elixir",
+  "version": "1.0.0",
+  "title": "Elixir Foundations",
+  "description": "Generic Elixir/Phoenix framework knowledge for coding agents — language reading essentials, OTP, mix and ExUnit quality gates, Phoenix/Ecto foundations, Absinthe GraphQL, and toolchain setup on a runner. Verified by execution; no application-specific claims.",
+  "domain": "elixir",
+  "requires": {
+    "browser": false,
+    "llm": false
+  },
+  "roles": [],
+  "private": false
+}

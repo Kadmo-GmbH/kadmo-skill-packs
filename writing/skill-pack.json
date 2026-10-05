@@ -1,0 +1,13 @@
+{
+  "name": "writing",
+  "version": "1.0.0",
+  "title": "Writing Standards",
+  "description": "Content creation, editing, and quality assurance. Copywriting frameworks, structured editing methodology, content strategy, social content, and AI writing pattern detection.",
+  "domain": "writing",
+  "requires": {
+    "browser": false,
+    "llm": true
+  },
+  "roles": ["writer", "editor"],
+  "private": false
+}

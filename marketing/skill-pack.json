@@ -1,0 +1,13 @@
+{
+  "name": "marketing",
+  "version": "1.0.0",
+  "title": "Performance Marketing",
+  "description": "Campaign management, media buying, analytics, and conversion optimization for paid search, paid social, display/programmatic, landing pages, and email sequences.",
+  "domain": "marketing",
+  "requires": {
+    "browser": false,
+    "llm": true
+  },
+  "roles": ["media-buyer", "analyst"],
+  "private": false
+}

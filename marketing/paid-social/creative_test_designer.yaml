@@ -1,0 +1,68 @@
+schema_version: 1
+version: "1.0.0"
+id: creative_test_designer
+title: "Creative Test Designer"
+description: "Design a structured creative test using the 3-3-3 framework. Outputs test matrix with hypothesis per cell, success criteria, kill rules, and measurement plan."
+overview: |
+  A test-design chain for paid social creative. It lays out a three-by-three-by-three matrix — three messages, three formats, three audiences — with an explicit hypothesis for every cell, success criteria, kill rules, and a measurement plan that names the metrics to watch and the statistical significance bar required before calling a winner.
+
+  Use it before spinning up a new creative batch on Meta, TikTok, or LinkedIn. The structured brief prevents ad-hoc "throw five things at the wall" testing and makes it obvious which cells were validated, which failed, and which still need more spend to read.
+
+category:
+  level: task
+  domain: marketing
+  reusable: true
+params:
+  funnel_stage: string
+  creative_assets: string
+  test_budget: string
+  media_context: string
+steps:
+  - type: llm.generate
+    prompt: |
+      You are a paid social creative strategist designing a structured creative test.
+
+      **Funnel stage:** {{funnel_stage}}
+      **Available creative assets:** {{creative_assets}}
+      **Test budget:** {{test_budget}}
+      **Media context:** {{media_context}}
+
+      Design a creative test using the 3-3-3 framework:
+      - 3 funnel levels (or use the specified stage)
+      - 3 concept angles (different pain points or value propositions)
+      - 3 creative formats (static / video / carousel OR UGC / polished / hybrid)
+
+      For each test cell:
+      1. State the hypothesis
+      2. Define the primary metric (CPA, ROAS, CTR depending on funnel stage)
+      3. Set the kill rule (e.g., "pause if CPA > 3x target after 1,000 impressions")
+
+      **Output format:**
+
+      ## Test Matrix
+      [3x3 grid: Concept angles (rows) × Formats (columns)]
+      Each cell: hypothesis + primary metric + kill rule
+
+      ## Budget Allocation
+      - Per-cell budget (equal split for ABO testing)
+      - Minimum impressions per cell for significance
+      - Expected test duration
+
+      ## Success Criteria
+      - Winner definition (e.g., "lowest CPA at 95% confidence after 7 days")
+      - Minimum data threshold before declaring winner
+      - What to do with the winner (graduate to CBO/ASC)
+
+      ## Kill Rules
+      - Per-cell kill rules with specific thresholds
+      - Frequency ceiling (pause at 3.0 prospecting / 7.0 retargeting)
+      - CTR floor (pause if CTR < 0.5% after 2,000 impressions)
+
+      ## Next Steps
+      - What to test after this round (iterate on winning concept → test formats → test hooks)
+      - Creative refresh timeline
+    as: test_plan
+
+  - type: variable.set
+    name: result
+    value: "{{test_plan}}"

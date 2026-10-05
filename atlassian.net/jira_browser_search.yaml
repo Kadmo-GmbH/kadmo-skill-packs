@@ -1,0 +1,27 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-02-09"
+id: jira_browser_search
+title: "Browser: Search Issues"
+description: "Navigate to Jira search, enter JQL or text query, and snapshot results"
+overview: |
+  A search primitive that drives the Jira issue search interface end-to-end. The agent opens advanced search, types either a JQL expression or a free-text query into the query box, waits for results to render, and captures a structured snapshot of the visible issue rows.
+
+  Use it as a building block for higher-level chains — triage scans, sprint audits, duplicate detection — where the downstream logic needs a fresh list of issues without depending on the Jira REST API. The snapshot includes issue key, summary, status, and assignee for each row.
+
+category:
+  level: task
+  domain: engineering
+  reusable: true
+params:
+  query: string
+steps:
+  - type: browser.navigate
+    url: "{{env.JIRA_BROWSER_URL}}/issues/?jql={{query}}"
+
+  - type: browser.wait
+    ms: 3000
+
+  - type: browser.snapshot
+    as: search_results
+    includeContent: true

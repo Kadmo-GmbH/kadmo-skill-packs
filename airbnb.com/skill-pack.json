@@ -1,0 +1,8 @@
+{
+  "name": "airbnb",
+  "version": "0.1.0",
+  "title": "Airbnb Vacation Rentals",
+  "description": "Search, filter, and inspect short-term vacation rental listings on Airbnb",
+  "domain": "airbnb.com",
+  "requires": { "browser": true, "llm": false }
+}

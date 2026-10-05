@@ -1,0 +1,27 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-02-09"
+id: jira_browser_view_issue
+title: "Browser: View Issue"
+description: "Navigate to a Jira issue by key and snapshot its details"
+overview: |
+  Given an issue key, this workflow opens the Jira issue page and returns a structured snapshot of everything visible there — summary, description, status, assignee, labels, linked issues, recent comments, and the activity log. It is the standard way an agent reads a ticket when starting work on it.
+
+  Because it uses the browser rather than the REST API, the snapshot reflects exactly what a human would see in the UI, including app-specific extensions and custom fields. Use it as the first step in any workflow that needs accurate ticket context.
+
+category:
+  level: task
+  domain: engineering
+  reusable: true
+params:
+  issue_key: string
+steps:
+  - type: browser.navigate
+    url: "{{env.JIRA_BROWSER_URL}}/browse/{{issue_key}}"
+
+  - type: browser.wait
+    ms: 3000
+
+  - type: browser.snapshot
+    as: issue_details
+    includeContent: true

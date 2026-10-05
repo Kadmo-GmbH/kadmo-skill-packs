@@ -1,0 +1,9 @@
+{
+  "name": "kleinanzeigen",
+  "version": "0.2.0",
+  "title": "Kleinanzeigen Classifieds",
+  "description": "Browse, search, and vet classified listings on Kleinanzeigen.de — Germany's general-purpose marketplace and rentals board. Includes newest-first search extraction and listing vetting for scarce-supply sniping.",
+  "domain": "kleinanzeigen.de",
+  "requires": { "browser": true, "llm": false },
+  "roles": ["snipe"]
+}

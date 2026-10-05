@@ -1,0 +1,8 @@
+{
+  "name": "immoscout24",
+  "version": "0.1.0",
+  "title": "ImmoScout24 Real Estate",
+  "description": "Search rentals, purchases, and short-stay listings on Germany's largest real estate portal",
+  "domain": "immobilienscout24.de",
+  "requires": { "browser": true, "llm": false }
+}

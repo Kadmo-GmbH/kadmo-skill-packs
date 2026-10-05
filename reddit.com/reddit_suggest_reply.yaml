@@ -1,0 +1,89 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-02-03"
+id: reddit_suggest_reply
+title: "Suggest Replies"
+description: "Thread-page floating button — reads the open thread, prompts for reply direction, returns 5 ranked MxTide-voice reply options."
+overview: |
+  Triggered from a floating SideButton overlay on an open Reddit thread, this chain reads the thread's content and then produces five ranked reply candidates in the operator's voice. Optional prompt input lets the operator nudge tone or angle — agree, push back, add data, ask a question — and the candidates are ranked by fit to the thread and the requested direction.
+
+  Unlike the single-draft workflow, this one is for moments where the operator wants optionality and will pick a candidate manually. Nothing is posted automatically; the chosen reply can be fed into the post-comment primitive if desired.
+
+category:
+  level: automation
+  domain: social
+  reusable: false
+params:
+  post_url: string
+  direction: string
+policies:
+  allowed_domains:
+    - old.reddit.com
+embed:
+  label: "Suggest Replies"
+  prompt:
+    param: direction
+    placeholder: "e.g. be snarky about the architecture, ask about their stack"
+    title: "Suggest Replies"
+  param_map:
+    post_url: "{{_url}}"
+    direction: "{{direction}}"
+  result:
+    action: "popup"
+steps:
+  # Extract thread data in-place (no navigation — we're already on the page)
+  - type: browser.extract
+    selector: ".title a.title"
+    as: title
+
+  - type: browser.extract
+    selector: ".score.unvoted"
+    attribute: "title"
+    as: score
+
+  - type: browser.extract
+    selector: ".expando .usertext-body"
+    as: body
+
+  - type: browser.extract
+    selector: ".comments"
+    as: comments
+
+  - type: browser.extractMap
+    selector: ".commentarea > .sitetable > .thing.comment > .entry"
+    fields:
+      author:
+        selector: ".author"
+      score:
+        selector: ".score.unvoted"
+        attribute: "title"
+      body:
+        selector: ".usertext-body"
+    as: thread_comments
+
+  # Generate 5 ranked reply options using shared persona workflow
+  - type: workflow.call
+    workflow: reddit_persona_draft
+    params:
+      title: "{{title}}"
+      score: "{{score}}"
+      body: "{{body}}"
+      comments: "{{comments}}"
+      thread_comments: "{{thread_comments}}"
+      instructions: "{{direction}}"
+      output_format: |
+        Generate exactly 5 reply options ranked by relevance to the thread topic and caller instructions. Vary the mood and angle across options. Rank #1 as best fit.
+
+        Output format — number each 1-5, each with a short target label (max 20 chars) then the draft text:
+
+        1. [Mood: X] target label here (max 20 chars)
+        draft text here
+
+        2. [Mood: X] target label here (max 20 chars)
+        draft text here
+
+        ...and so on for all 5.
+    as: persona
+
+  - type: control.stop
+    message: "{{persona.draft}}\n\nPost: {{post_url}}"

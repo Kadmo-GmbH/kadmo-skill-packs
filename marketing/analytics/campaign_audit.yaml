@@ -1,0 +1,92 @@
+schema_version: 1
+version: "1.0.0"
+id: campaign_audit
+title: "Campaign Audit"
+description: "Audit campaign structure, spend efficiency, tracking, creative, audiences, and bidding across all active channels. Returns prioritized findings with estimated impact."
+overview: |
+  A comprehensive audit chain that walks every active campaign across the account's paid channels and scores it across six dimensions: structure, spend efficiency, conversion tracking, creative quality, audience setup, and bid strategy. Each issue it surfaces is classified by severity and paired with an estimated performance impact if fixed.
+
+  Use this at the start of a new engagement, before a quarterly review, or whenever performance has drifted without a clear cause. The output is a prioritised findings list designed to be read by a human media buyer, not acted on automatically.
+
+category:
+  level: task
+  domain: marketing
+  reusable: true
+params:
+  channels: string
+  date_range: string
+  media_context: string
+steps:
+  - type: llm.generate
+    prompt: |
+      You are a performance marketing analyst conducting a campaign audit.
+
+      **Channels to audit:** {{channels}}
+      **Date range:** {{date_range}}
+      **Media context:** {{media_context}}
+
+      Audit across these six dimensions:
+
+      1. **Structure** — Campaign/ad group organization, naming conventions, segmentation quality
+      2. **Spend Efficiency** — CPA/ROAS by segment, wasted spend identification, budget pacing
+      3. **Tracking** — Conversion setup accuracy, platform vs backend discrepancy, UTM consistency
+      4. **Creative** — Performance distribution, fatigue signals, testing cadence
+      5. **Audience** — Targeting quality, overlap between ad sets, exclusion rules, funnel alignment
+      6. **Bidding** — Strategy appropriateness, learning phase status, target realism
+
+      For each dimension, score 0-100 using this rubric:
+      - 90-100: Excellent — best practices followed, no issues
+      - 70-89: Good — minor optimizations available
+      - 50-69: Needs attention — clear waste or missed opportunities
+      - 30-49: Poor — significant issues impacting performance
+      - 0-29: Critical — fundamental problems, pause and fix before spending more
+
+      Calculate the Overall Health Score as a weighted average:
+      - Structure: 15% | Spend Efficiency: 25% | Tracking: 20% | Creative: 15% | Audience: 15% | Bidding: 10%
+
+      Letter grade: A (90-100), B (80-89), C (70-79), D (50-69), F (<50)
+
+      For each dimension provide:
+      - Score (0-100) and letter grade
+      - Finding: What specifically is wrong or at risk
+      - Impact: Estimated waste or opportunity (in spend % or conversion lift %)
+      - Action: Specific fix with priority (P1/P2/P3)
+
+      **Quality Gate checks (auto-fail any dimension if violated):**
+      - Tracking: If platform conversions differ from backend by >20%, score caps at 40
+      - Spend: If >20% of spend goes to zero-conversion segments, score caps at 50
+      - Bidding: If tCPA target is >50% away from actual CPA, score caps at 50
+
+      Output format:
+      ## Health Score: [0-100] ([Letter Grade])
+      [One-line summary]
+
+      ## Top 3 Findings
+      [Prioritized by estimated impact]
+
+      ## Dimension Scores
+      [Table: Dimension | Score | Grade | Key Finding | Est. Impact]
+
+      ## Prioritized Actions
+      [Numbered list, P1 first, with estimated impact and effort level]
+
+      ## Detailed Findings
+      [Per-dimension breakdown with evidence]
+    as: audit_report
+
+  - type: llm.classify
+    input: "{{audit_report}}"
+    categories:
+      - healthy
+      - needs_optimization
+      - urgent_issues
+    prompt: "Based on the audit findings, classify the overall campaign health."
+    as: health_status
+
+  - type: variable.set
+    name: result
+    value: |
+      **Campaign Audit Complete**
+      Health: {{health_status}}
+
+      {{audit_report}}

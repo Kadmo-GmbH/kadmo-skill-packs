@@ -1,0 +1,64 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-02-05"
+id: reddit_read_thread
+title: "Read Thread"
+description: "Read a full Reddit thread in one pass — post metadata (title, score, author, flair, comment count, body) plus structured top-level comments (author, score, body). Single page load, combined output."
+overview: |
+  In a single page load, this workflow captures everything an agent needs to reason about a Reddit thread: the post itself with full body, score, author, and flair, plus every top-level comment as a structured list with author, score, and body text. Reply trees are summarised at the top level only, keeping the output compact.
+
+  It is the standard comprehension step in front of any Reddit drafting or classification workflow. One load keeps rate-limiting pressure low and avoids brittle multi-page scraping patterns.
+
+category:
+  level: task
+  domain: social
+  reusable: true
+params:
+  post_url: string
+steps:
+  - type: browser.navigate
+    url: "{{post_url}}"
+
+  - type: browser.wait
+    selector: "#siteTable .thing"
+    timeout: 10000
+
+  - type: browser.extract
+    selector: ".title a.title"
+    as: title
+
+  - type: browser.extract
+    selector: "#siteTable .score.unvoted"
+    attribute: "title"
+    as: score
+
+  - type: browser.extract
+    selector: "#siteTable .tagline .author"
+    as: author
+
+  - type: browser.extract
+    selector: "#siteTable .linkflair-text"
+    as: flair
+
+  - type: browser.extract
+    selector: ".comments"
+    as: comments
+
+  - type: browser.extract
+    selector: ".expando .usertext-body"
+    as: body
+
+  - type: browser.extractMap
+    selector: ".commentarea > .sitetable > .thing.comment > .entry"
+    fields:
+      author:
+        selector: ".author"
+      score:
+        selector: ".score.unvoted"
+        attribute: "title"
+      body:
+        selector: ".usertext-body"
+    as: thread_comments
+
+  - type: control.stop
+    message: "title: {{title}}\nscore: {{score}}\nauthor: {{author}}\nflair: {{flair}}\ncomments: {{comments}}\n---\n{{body}}\n\n---\nComments:\n{{thread_comments}}"

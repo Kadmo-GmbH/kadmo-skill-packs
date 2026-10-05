@@ -1,0 +1,8 @@
+{
+  "name": "wikipedia",
+  "version": "1.0.0",
+  "title": "Wikipedia",
+  "description": "Article extraction and summarization from Wikipedia",
+  "domain": "wikipedia.org",
+  "requires": { "browser": true, "llm": true }
+}

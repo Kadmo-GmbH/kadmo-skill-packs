@@ -1,0 +1,8 @@
+{
+  "name": "booking",
+  "version": "0.1.0",
+  "title": "Booking.com Vacation Stays",
+  "description": "Search vacation homes and accommodations on Booking.com with property-type and location filters",
+  "domain": "booking.com",
+  "requires": { "browser": true, "llm": false }
+}

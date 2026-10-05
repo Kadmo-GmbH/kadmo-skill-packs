@@ -1,0 +1,30 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2025-12-21"
+id: wikipedia_open
+title: "Open Article"
+description: "Navigate to a Wikipedia article by topic and wait for the page to load"
+overview: |
+  Takes a topic string — either an exact article name or a search term — and navigates the browser to the matching Wikipedia article. The workflow follows disambiguation redirects when Wikipedia routes through one, and it waits for the article body to finish rendering before completing so downstream extractors can work against a stable DOM.
+
+  This is the opening step for any Wikipedia research chain. Use it on its own when the goal is to present a reader with the article, or in combination with the extractor and summariser workflows when the goal is to pull article text into an agent pipeline.
+
+category:
+  level: primitive
+  domain: research
+  reusable: true
+params:
+  topic: string
+policies:
+  allowed_domains:
+    - wikipedia.org
+    - "*.wikipedia.org"
+steps:
+  # Navigate to Wikipedia article
+  - type: browser.navigate
+    url: "https://en.wikipedia.org/wiki/{{topic}}"
+
+  # Wait for article content to load
+  - type: browser.wait
+    selector: "#firstHeading"
+    timeout: 10000

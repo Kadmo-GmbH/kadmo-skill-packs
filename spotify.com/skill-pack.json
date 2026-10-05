@@ -1,0 +1,8 @@
+{
+  "name": "spotify",
+  "version": "1.0.0",
+  "title": "Spotify Music",
+  "description": "Song search, playlist import, and music migration for Spotify",
+  "domain": "spotify.com",
+  "requires": { "browser": true, "llm": false }
+}

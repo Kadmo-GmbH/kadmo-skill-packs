@@ -1,0 +1,94 @@
+schema_version: 1
+version: "1.0.0"
+id: media_context_builder
+title: "Media Context Builder"
+description: "Build a complete media-context.md from structured business inputs. Interactive workflow that asks follow-up questions for missing fields."
+overview: |
+  An interactive chain that produces a complete media-context document for a brand or product. It starts from whatever structured inputs the operator provides — business model, target audience, funnel metrics, competitive set — and asks targeted follow-up questions for anything it cannot fill in confidently, stopping when the document is complete and internally consistent.
+
+  The resulting media-context is used as the shared briefing input for the downstream planning, buying, and creative workflows in this pack, so every subsequent agent works from the same assumptions. Rebuild it whenever the business or audience shifts.
+
+category:
+  level: task
+  domain: marketing
+  reusable: true
+params:
+  business_info: string
+  product_info: string
+  audience_info: string
+  historical_data: string
+steps:
+  - type: llm.generate
+    prompt: |
+      You are building a media-context.md file for a performance marketing skill pack.
+      This file provides all the account-specific context that marketing modules need.
+
+      **Business information:** {{business_info}}
+      **Product/offer information:** {{product_info}}
+      **Audience information:** {{audience_info}}
+      **Historical performance data:** {{historical_data}}
+
+      Generate a complete media-context.md following this structure.
+      For any missing information, note it as "[NEEDS INPUT]" with a specific question.
+
+      **Output format (markdown):**
+
+      ```markdown
+      # Media Context
+
+      ## Business Goal
+      [Primary campaign objective: leads / purchases / signups / app installs / awareness]
+      [Secondary objectives if any]
+
+      ## KPIs and Targets
+      | KPI | Target | Current Baseline |
+      |-----|--------|-----------------|
+      | Primary: [CPA/ROAS/CPL] | [target value] | [current if known] |
+      | Secondary: [metric] | [target] | [current] |
+
+      ## Budget
+      - Monthly budget: [amount]
+      - Channel allocation: [pre-decided or to-be-optimized]
+      - Testing budget: [% reserved for experiments]
+
+      ## Audience
+      - ICP: [description]
+      - Demographics: [age, gender, income, education]
+      - Firmographics (B2B): [company size, industry, job titles]
+      - Interests/behaviors: [relevant categories]
+      - Existing customer data: [pixel data, CRM lists, purchase history]
+
+      ## Product/Offer
+      - What is being promoted: [product/service]
+      - Pricing: [price point, plans, free trial]
+      - USPs: [unique value propositions]
+      - Competitive positioning: [vs competitors]
+
+      ## Channels
+      [Which platforms are in scope]
+      | Channel | Status | Notes |
+      |---------|--------|-------|
+
+      ## Creative Assets
+      - Available: [images, videos, logos, brand guidelines]
+      - Needed: [what's missing]
+
+      ## Tracking Setup
+      - Pixel/tag status: [installed/not installed per platform]
+      - Conversion events: [defined events]
+      - Analytics platform: [GA4/Mixpanel/etc]
+      - Server-side tracking: [active/not active]
+      - UTM convention: [defined/needs setup]
+
+      ## Historical Data
+      [Past campaign performance if available]
+      | Channel | Monthly Spend | CPA/ROAS | Conv Volume | Period |
+      ```
+
+      ## Missing Information
+      [List specific questions for any [NEEDS INPUT] fields]
+    as: media_context
+
+  - type: variable.set
+    name: result
+    value: "{{media_context}}"

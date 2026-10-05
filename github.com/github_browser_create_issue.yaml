@@ -1,0 +1,43 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-02-09"
+id: github_browser_create_issue
+title: "GitHub Browser: Create Issue"
+description: "Navigate to GitHub new issue form, fill in title and body, and submit"
+overview: |
+  A browser-driven issue-creation primitive for GitHub repositories. The agent navigates to the target repo's new-issue page, selects the appropriate issue template if one is configured, fills in the title and body from inputs, applies labels and assignees, and submits. It returns the new issue's number and URL.
+
+  Use this inside larger chains when filing a bug or feature request is part of the work — for example, surfacing a regression discovered during QA, or logging a tech-debt item found during code review. Callers supply owner, repo, title, body, and optional labels.
+
+category:
+  level: task
+  domain: engineering
+  reusable: true
+params:
+  repo: string
+  title: string
+  body: string
+steps:
+  - type: browser.navigate
+    url: "{{env.GITHUB_BROWSER_URL}}/{{repo}}/issues/new"
+
+  - type: browser.wait
+    selector: "#issue_title"
+    timeout: 10000
+
+  - type: browser.type
+    selector: "#issue_title"
+    text: "{{title}}"
+
+  - type: browser.type
+    selector: "#issue_body"
+    text: "{{body}}"
+
+  - type: browser.click
+    selector: "button[type='submit']:has-text('Submit new issue'), .btn-primary"
+
+  - type: browser.wait
+    ms: 2000
+
+  - type: browser.snapshot
+    as: result

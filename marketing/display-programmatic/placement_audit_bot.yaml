@@ -1,0 +1,69 @@
+schema_version: 1
+version: "1.0.0"
+id: placement_audit_bot
+title: "Placement Quality Audit"
+description: "Analyze placement report for MFA risk, viewability issues, and quality scoring. Outputs exclusion list, allowlist recommendations, and quality scores."
+overview: |
+  A placement-quality analysis chain that ingests a display or programmatic placement report and scores each domain or app on made-for-advertising risk, viewability, invalid traffic indicators, and brand-safety signals. Problematic placements are grouped into an exclusion list; high-performing ones become an allowlist candidate set.
+
+  Run it monthly or after any significant spend increase in open-exchange display. Output is intended to feed back into the DSP or network as an exclusion or allowlist update, and to drive budget re-allocation away from low-quality inventory.
+
+category:
+  level: task
+  domain: marketing
+  reusable: true
+params:
+  placement_data: string
+  viewability_target: string
+  brand_safety_level: string
+steps:
+  - type: llm.generate
+    prompt: |
+      You are a programmatic quality analyst auditing placement data.
+
+      **Placement data:** {{placement_data}}
+      **Viewability target:** {{viewability_target}}
+      **Brand safety level:** {{brand_safety_level}}
+
+      Analyze each placement against MFA signals and quality criteria.
+
+      **MFA Detection (5-signal checklist per placement):**
+      1. Ad density signals (>30% mobile / >50% desktop = fail)
+      2. Ad refresh behavior anomalies
+      3. Traffic source composition (>50% paid = arbitrage flag)
+      4. Content quality (AI-generated, templated, non-unique)
+      5. Site design/UX (cookie-cutter, aggressive popups)
+
+      **Quality Scoring (0-100 per placement):**
+      - Viewability (30% weight): >70% = 100, 50-70% = 70, 30-50% = 40, <30% = 0
+      - MFA risk (25%): 0 signals = 100, 1-2 = 50, 3+ = 0
+      - IVT rate (25%): <2% = 100, 2-5% = 70, 5-10% = 30, >10% = 0
+      - Performance (20%): Above avg CPA = 100, avg = 70, below avg = 30, no conv = 0
+
+      **Output format:**
+
+      ## Placement Quality Summary
+      - Total placements analyzed: [count]
+      - Average quality score: [0-100]
+      - MFA risk placements: [count and % of spend]
+
+      ## Exclusion List (Quality Score <40)
+      | Placement | Quality Score | Primary Issue | Spend Wasted |
+
+      ## Watch List (Quality Score 40-60)
+      | Placement | Quality Score | Risk Factor | Recommendation |
+
+      ## Allowlist Candidates (Quality Score >80)
+      | Placement | Quality Score | Viewability | Performance |
+
+      ## Supply Chain Issues
+      [Any ads.txt/sellers.json/SupplyChain validation failures]
+
+      ## Estimated Savings
+      [Total spend on excluded placements = recoverable budget]
+      [Projected CPA improvement from exclusions]
+    as: audit_result
+
+  - type: variable.set
+    name: result
+    value: "{{audit_result}}"

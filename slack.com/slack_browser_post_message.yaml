@@ -1,0 +1,40 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-02-09"
+id: slack_browser_post_message
+title: "Browser: Post Message"
+description: "Navigate to a Slack channel, type a message, and send it"
+overview: |
+  A browser-driven write primitive for Slack. The agent navigates to the target channel or direct message, places the supplied message body into the composer, and submits. Formatting is preserved as long as the caller uses Slack's standard markdown — bold, italics, lists, inline code, and code fences all survive the round trip.
+
+  Use it as the send step behind any drafting or triage workflow. Channel targeting can be by channel ID, by @-mention URL, or by channel name; the workflow resolves each to the correct URL before composing.
+
+category:
+  level: task
+  domain: ops
+  reusable: true
+params:
+  channel: string
+  message: string
+steps:
+  - type: browser.navigate
+    url: "{{env.SLACK_BROWSER_URL}}/{{channel}}"
+
+  - type: browser.wait
+    ms: 3000
+
+  - type: browser.click
+    selector: "[data-qa='message_input'] .ql-editor, .c-wysiwyg_container [contenteditable='true']"
+
+  - type: browser.type
+    selector: "[data-qa='message_input'] .ql-editor, .c-wysiwyg_container [contenteditable='true']"
+    text: "{{message}}"
+
+  - type: browser.key
+    key: "Enter"
+
+  - type: browser.wait
+    ms: 1000
+
+  - type: browser.snapshot
+    as: result

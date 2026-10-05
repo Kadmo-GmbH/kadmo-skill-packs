@@ -1,0 +1,45 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-02-02"
+id: reddit_check_replies
+title: "Check Replies"
+description: "Inbox pull for the logged-in user — fetches recent comment replies with author, body, parent-thread link, and timestamp. Requires active login session."
+overview: |
+  Navigates to the inbox of the currently logged-in Reddit account and extracts the recent replies to the operator's comments. Each item returns the author, the reply body, the parent-thread URL, and the timestamp, so downstream logic can decide whether to respond, ignore, or escalate.
+
+  Use it at the start of every community-management session as the trigger for follow-up drafting workflows, or run it on a schedule to surface replies that need attention. It requires an active Reddit session in the connected browser; authentication is not managed by the workflow.
+
+category:
+  level: task
+  domain: social
+  reusable: true
+policies:
+  allowed_domains:
+    - old.reddit.com
+steps:
+  - type: browser.navigate
+    url: "https://old.reddit.com/message/comments/"
+
+  - type: browser.wait
+    selector: "#siteTable .thing"
+    timeout: 10000
+
+  - type: browser.extractMap
+    selector: "#siteTable .thing"
+    fields:
+      author:
+        selector: ".tagline .author"
+      subject:
+        selector: ".subject a.title"
+      parent_link:
+        selector: ".subject a.title"
+        attribute: "href"
+      time:
+        selector: ".tagline time"
+        attribute: "title"
+      body:
+        selector: ".md"
+    as: replies
+
+  - type: control.stop
+    message: "{{replies}}"

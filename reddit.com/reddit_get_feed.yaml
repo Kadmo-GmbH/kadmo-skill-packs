@@ -1,0 +1,50 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-02-02"
+id: reddit_get_feed
+title: "Get Feed"
+description: "Fetch posts from a subreddit sorted by hot, new, rising, or top via browser extraction on old.reddit.com. Returns structured data: title, url, score, comments, author, and flair per post."
+overview: |
+  Opens any subreddit on old.reddit.com, switches the sort to hot, new, rising, or top as requested, and extracts the visible post list into a structured array. Each post yields its title, permalink, score, comment count, author, and flair — enough context to decide whether a thread is worth reading in full.
+
+  Use it as the opening step of any Reddit engagement sweep, as an input to trend monitoring, or as a primitive for research on community activity patterns. Old.reddit.com is used intentionally because its DOM is more stable than new Reddit for extraction.
+
+category:
+  level: task
+  domain: social
+  reusable: true
+policies:
+  allowed_domains:
+    - old.reddit.com
+params:
+  subreddit: string
+  sort: string
+steps:
+  - type: browser.navigate
+    url: "https://old.reddit.com/r/{{subreddit}}/{{sort}}"
+
+  - type: browser.wait
+    selector: "#siteTable > .thing.link"
+    timeout: 10000
+
+  - type: browser.extractMap
+    selector: "#siteTable > .thing.link:not(.promoted)"
+    fields:
+      title:
+        selector: ".title a.title"
+      url:
+        selector: ".title a.title"
+        attribute: "href"
+      score:
+        selector: ".score.unvoted"
+        attribute: "title"
+      comments:
+        selector: ".comments"
+      author:
+        selector: ".author"
+      flair:
+        selector: ".linkflair-text"
+    as: feed
+
+  - type: control.stop
+    message: "{{feed}}"

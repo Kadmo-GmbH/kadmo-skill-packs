@@ -1,0 +1,15 @@
+{
+  "name": "figma-design-handoff",
+  "version": "1.0.0",
+  "title": "Figma Design Handoff",
+  "description": "Read a Figma frame link through the workspace's figma MCP server, as the account's connected Figma user, and build the screen in the repo's own stack: the link grammar, the portal-delivered token, the request budget, the one-question rule and the never-rules.",
+  "domain": "figma.com",
+  "requires": {
+    "browser": false,
+    "llm": true
+  },
+  "roles": [
+    "se"
+  ],
+  "private": false
+}

@@ -1,0 +1,9 @@
+{
+  "name": "slack",
+  "version": "1.0.0",
+  "title": "Slack Workspace",
+  "description": "Channel reading, message posting, and thread management for Slack",
+  "domain": "slack.com",
+  "requires": { "browser": true, "llm": false },
+  "roles": ["pm"]
+}

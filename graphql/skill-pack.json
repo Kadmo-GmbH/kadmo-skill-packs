@@ -1,0 +1,13 @@
+{
+  "name": "graphql",
+  "version": "1.0.0",
+  "title": "GraphQL Client Integration",
+  "description": "The client side of a typed GraphQL seam — Apollo Client 4 migration traps, mutations and cache rules, typed codegen (and the two vendors' opposing guidance), and the three-check schema-drift pipeline that catches what document validation is blind to.",
+  "domain": "graphql",
+  "requires": {
+    "browser": false,
+    "llm": false
+  },
+  "roles": [],
+  "private": false
+}

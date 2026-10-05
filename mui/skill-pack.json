@@ -1,0 +1,13 @@
+{
+  "name": "mui",
+  "version": "1.0.0",
+  "title": "MUI Breaking Changes",
+  "description": "What an agent writing React against MUI gets wrong from training-data drift — Material UI v5→v9 and MUI X v8 breaking changes, the version-pinned docs trap, Grid/slots/theming API deltas, licensing tiers, and TypeScript augmentation moves. Registry-verified.",
+  "domain": "mui",
+  "requires": {
+    "browser": false,
+    "llm": false
+  },
+  "roles": [],
+  "private": false
+}

@@ -1,0 +1,9 @@
+{
+  "name": "reddit",
+  "version": "1.0.0",
+  "title": "Reddit Community",
+  "description": "Feed scanning, thread analysis, and comment drafting for Reddit",
+  "domain": "reddit.com",
+  "requires": { "browser": true, "llm": true },
+  "roles": ["smm"]
+}

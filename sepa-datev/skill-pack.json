@@ -1,0 +1,13 @@
+{
+  "name": "sepa-datev",
+  "version": "1.0.0",
+  "title": "SEPA Direct Debit & DATEV Export",
+  "description": "German-market payment-rails and accounting-export knowledge for QA and SE agents — pain.008 structure and character rules, mandate lifecycle and sequence types, R-transaction reason codes, IBAN/Creditor-ID validation, DATEV EXTF format, SKR charts and non-profit tax spheres, with a synthetic fixture matrix. Verified against EPC and DATEV primary sources.",
+  "domain": "sepa-datev",
+  "requires": {
+    "browser": false,
+    "llm": false
+  },
+  "roles": [],
+  "private": false
+}

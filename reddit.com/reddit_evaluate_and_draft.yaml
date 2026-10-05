@@ -1,0 +1,85 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-02-03"
+id: reddit_evaluate_and_draft
+title: "Evaluate & Draft"
+description: "Single-thread decision — runs Strategy D on one thread, returns COMMENT/SKIP verdict, importance score, and a MxTide-voice draft."
+overview: |
+  Scores a single Reddit thread against the operator's engagement strategy and produces a structured decision: either a COMMENT verdict with a draft reply and an importance score, or a SKIP verdict with the reason it was rejected. A voice-consistent draft is only generated when the verdict is COMMENT, saving inference calls on obviously off-target threads.
+
+  It is the atomic unit reused by the subreddit scan workflow, and it can also be dispatched on a single thread URL for targeted evaluation without pulling an entire feed first.
+
+category:
+  level: process
+  domain: social
+  reusable: true
+params:
+  title: string
+  score: string
+  author: string
+  flair: string
+  comments: string
+  body: string
+  thread_comments: string
+steps:
+  # Evaluate thread against Strategy D criteria
+  - type: llm.generate
+    prompt: |
+      Evaluate this Reddit thread for u/MxTide (Berlin indie dev, browser automation, Claude Code, MCP servers).
+
+      Strategy D criteria (all must pass for COMMENT):
+      - Post < 15 min old, 3+ early comments, projected < 20 final, < 10 current
+      - Topic matches MxTide credibility: Claude Code, MCP, browser automation, CLAUDE.md, cost/pricing
+      Skip signals (2+ = SKIP): sensational title + new account, universal topic, score > 20, 10+ comments on rising, hot take framing.
+
+      Importance 0-100: topic relevance to MxTide, thread timing, comment opportunity, visibility potential.
+
+      ---
+      title: {{title}}
+      score: {{score}}
+      author: {{author}}
+      flair: {{flair}}
+      comments: {{comments}}
+      body: {{body}}
+
+      Reply with EXACTLY: COMMENT|score or SKIP|score
+      Examples: COMMENT|82 or SKIP|15
+      Nothing else.
+    as: eval_raw
+
+  # Parse verdict
+  - type: data.get
+    input: "{{eval_raw}}"
+    separator: "|"
+    index: "0"
+    as: verdict
+
+  # Parse importance
+  - type: data.get
+    input: "{{eval_raw}}"
+    separator: "|"
+    index: "1"
+    as: importance
+
+  # If COMMENT: draft a reply
+  - type: control.if
+    condition: "{{verdict}} == 'COMMENT'"
+    then:
+      - type: workflow.call
+        workflow: reddit_persona_draft
+        params:
+          title: "{{title}}"
+          score: "{{score}}"
+          body: "{{body}}"
+          comments: "{{comments}}"
+          thread_comments: "{{thread_comments}}"
+          instructions: ""
+          output_format: "Output ONLY the raw comment text. No labels, no quotes, no formatting. Just the comment as it would appear in the textarea."
+        as: persona
+
+      - type: control.stop
+        message: "verdict: COMMENT\nimportance: {{importance}}\ndraft: {{persona.draft}}"
+
+    else_steps:
+      - type: control.stop
+        message: "verdict: SKIP\nimportance: {{importance}}"

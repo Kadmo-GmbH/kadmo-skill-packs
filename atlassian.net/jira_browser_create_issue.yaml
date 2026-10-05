@@ -1,0 +1,46 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-02-09"
+id: jira_browser_create_issue
+title: "Jira Browser: Create Issue"
+description: "Navigate to Jira create issue form, fill fields, and submit"
+overview: |
+  A browser-driven creation flow that opens the Jira create-issue dialog, fills in project, issue type, summary, description, labels, and any custom fields supplied as inputs, and submits. It relies on the Jira Cloud knowledge pack for selectors and handles both the global create button and the project-scoped dialog variants.
+
+  Use this when an agent needs to file a ticket as part of a larger chain — for example, during triage, bug reporting, or converting a chat message into a tracked issue. It returns the new issue key so downstream steps can link or comment on it.
+
+category:
+  level: task
+  domain: engineering
+  reusable: true
+params:
+  project: string
+  summary: string
+  description: string
+steps:
+  - type: browser.navigate
+    url: "{{env.JIRA_BROWSER_URL}}/secure/CreateIssue!default.jspa"
+
+  - type: browser.wait
+    selector: "#summary"
+    timeout: 10000
+
+  - type: browser.snapshot
+    as: create_form
+
+  - type: browser.type
+    selector: "#summary"
+    text: "{{summary}}"
+
+  - type: browser.type
+    selector: "#description"
+    text: "{{description}}"
+
+  - type: browser.click
+    selector: "#create-issue-submit"
+
+  - type: browser.wait
+    ms: 2000
+
+  - type: browser.snapshot
+    as: result

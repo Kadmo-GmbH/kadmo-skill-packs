@@ -1,0 +1,28 @@
+schema_version: 1
+version: "1.0.0"
+last_verified: "2026-02-09"
+id: github_browser_view_pr
+title: "Browser: View PR"
+description: "Navigate to a GitHub pull request page and snapshot details"
+overview: |
+  Opens a specific PR by owner, repo, and number, and returns a rich structured snapshot: title, description, author, branch info, labels, requested reviewers, current review state, check-run summary, the diff file list, and the most recent inline and top-level comments.
+
+  This is the first step an agent takes when reviewing, merging, or following up on a PR. The snapshot gives downstream reasoning steps enough context to decide whether to approve, request changes, or merge, without fetching anything further.
+
+category:
+  level: task
+  domain: engineering
+  reusable: true
+params:
+  repo: string
+  number: string
+steps:
+  - type: browser.navigate
+    url: "{{env.GITHUB_BROWSER_URL}}/{{repo}}/pull/{{number}}"
+
+  - type: browser.wait
+    ms: 3000
+
+  - type: browser.snapshot
+    as: pr_details
+    includeContent: true

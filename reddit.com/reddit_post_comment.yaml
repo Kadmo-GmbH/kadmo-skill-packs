@@ -1,0 +1,55 @@
+schema_version: 1
+version: "2.0.0"
+last_verified: "2026-02-02"
+id: reddit_post_comment
+title: "Post Comment"
+description: "Navigate to a Reddit post on old.reddit.com, type a top-level comment, and submit it. Requires an active Reddit session in the browser."
+overview: |
+  A write primitive that actually submits a top-level comment on a Reddit thread. It navigates to the post on old.reddit.com, places the supplied body into the comment textarea, performs a submit, and confirms the new comment URL before returning. No drafting logic is included — the caller must pass a final, ready-to-send comment body.
+
+  Because it writes to a public platform, this workflow is intentionally separated from the drafting chains. Compose it after a human approval step or a supervised drafting workflow; never chain it directly behind an unsupervised LLM step.
+
+category:
+  level: task
+  domain: social
+  reusable: true
+params:
+  post_url: string
+  comment_text: string
+policies:
+  allowed_domains:
+    - old.reddit.com
+steps:
+  - type: browser.navigate
+    url: "{{post_url}}"
+
+  - type: browser.wait
+    selector: ".commentarea .usertext-edit textarea"
+    timeout: 10000
+
+  # Scroll past media/video overlays that can block comment box
+  - type: browser.scroll
+    direction: down
+    amount: 600
+
+  - type: browser.click
+    selector: ".commentarea .usertext-edit textarea"
+
+  - type: browser.type
+    selector: ".commentarea .usertext-edit textarea"
+    text: "{{comment_text}}"
+
+  - type: browser.click
+    selector: ".commentarea .usertext-edit button.save"
+
+  - type: browser.wait
+    ms: 3000
+
+  # Extract all comments to verify posted text appears
+  - type: browser.extractAll
+    selector: ".commentarea .comment .usertext-body p"
+    as: all_comments
+    separator: "\n"
+
+  - type: control.stop
+    message: "{{all_comments}}"

@@ -1,0 +1,8 @@
+{
+  "name": "traum-ferienwohnungen",
+  "version": "0.1.0",
+  "title": "Traum-Ferienwohnungen Site",
+  "description": "German vacation rental marketplace by Oyo — homepage and search shell only",
+  "domain": "traum-ferienwohnungen.de",
+  "requires": { "browser": true, "llm": false }
+}

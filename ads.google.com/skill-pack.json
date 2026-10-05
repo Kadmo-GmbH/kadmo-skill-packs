@@ -1,0 +1,9 @@
+{
+  "name": "google-ads",
+  "version": "1.0.0",
+  "title": "Google Ads Search Platform",
+  "description": "Search campaign management, ad optimization, keyword diagnostics, and bid strategy for Google Ads",
+  "domain": "ads.google.com",
+  "requires": { "browser": true, "llm": true },
+  "roles": ["analyst"]
+}
