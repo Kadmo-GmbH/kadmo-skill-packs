@@ -1,8 +1,6 @@
 # Kadmo Skill Packs
 
-The public skill library of [Kadmo](https://kadmo.ai): knowledge packs for common sites, tools and crafts that the Kadmo CLI installs and that every Kadmo agent can use.
-
-> **Being prepared.** These packs arrived on 2026-10-05 from the catalog Kadmo grew out of, and some still carry its names. They are renamed and reviewed before this repository turns public.
+The public skill library of [Kadmo](https://kadmo.ai): knowledge packs for common sites, tools and crafts that every Kadmo agent can use.
 
 ## What a pack is
 
@@ -19,7 +17,7 @@ A pack is one directory named after its domain, for example `github.com` or `wri
 
 ## How packs are used
 
-The Kadmo CLI installs a pack by its domain from the catalogue at `app.kadmo.ai`, which serves this repository. On a Kadmo agent, a customer's own packs come first: a pack, a workflow or a role guide of the customer's account extends or replaces what this library provides.
+Kadmo's agents get this library from this repository. On a Kadmo agent, a customer's own packs come first: a pack, a workflow or a role guide of the customer's account extends or replaces what this library provides.
 
 What makes Kadmo's agents work, the agent operations and Skill Discovery, is not part of this library. Kadmo delivers it to its customers' agents directly.
 
