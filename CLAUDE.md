@@ -1,6 +1,6 @@
 * **This repository is public**: the Kadmo skill library under Apache-2.0, read by anyone and installed on every Kadmo agent; write every file as public text.
 * **Source of truth**: README.md (what a pack is, how packs are used) and NAMING.md (titles, lengths, uniqueness).
-* **Never here**: the agent ops (`agents`), Skill Discovery (`_roles/sd.md`, `_souls/sd.md`, `agent_sd_*`), a customer's name, an internal playbook, a price or outreach text; check every change for them by hand before a merge.
+* **Never here**: the agent operations and Skill Discovery (Kadmo delivers them to its customers' agents directly), a customer's name, an internal playbook, a price or outreach text; check every change for them by hand before a merge.
 * **A pack**: one directory named after its domain with `skill-pack.json`, `_skill.md`, its modules, `_roles/<role>.md` and `*.yaml` workflows; bump its `version` and update `index.json` in the same change.
 * **Precedence on an agent**: a customer's own pack, workflow or role guide extends or replaces what this library provides; write packs so that an override stays possible.
 * **Ticket creation needs approval**: propose the ticket first (title, type, Problem, Fix) and create it only after the user's yes; an unattended agent creates one only when its task requires it.
